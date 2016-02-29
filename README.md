@@ -24,6 +24,10 @@ Your source goes in `$project_name`. Use `project.py` to configure
 
 Run `ct-mksetup` to generate/update `setup.py`.
 
+## ct-mkvenv
+
+See `ct-mkvenv --help`
+
 ## ct-interpreter
 
 See `ct-interpreter --help`
@@ -43,6 +47,8 @@ into a package.
 
 `ct-mksetup` should be run before any commit and deployment. For the latter, call
 `ct-mksetup` in your deploy scripts.
+
+Simply include test dependencies in install_requires.
 
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If

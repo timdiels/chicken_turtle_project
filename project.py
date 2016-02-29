@@ -51,12 +51,11 @@ project = dict(
     keywords='',
   
     # Required dependencies
-    install_requires='click plumbum chicken_turtle_util',
+    install_requires='click plumbum chicken_turtle_util pytest',
   
     # Optional dependencies
     extras_require={
         'dev': '',
-        'test': 'pytest',
     },
     
     # Auto generate entry points
@@ -64,6 +63,7 @@ project = dict(
         'console_scripts': [
             'ct-mksetup = chicken_turtle_project.mksetup:main',
             'ct-mkproject = chicken_turtle_project.mkproject:main',
+            'ct-mkvenv = chicken_turtle_project.mkvenv:main',
             'ct-interpreter = chicken_turtle_project.interpreter:main',
         ],
     },

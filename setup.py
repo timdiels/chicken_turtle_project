@@ -29,6 +29,7 @@ setup(
         'console_scripts': [
             'ct-mksetup = chicken_turtle_project.mksetup:main',
             'ct-mkproject = chicken_turtle_project.mkproject:main',
+            'ct-mkvenv = chicken_turtle_project.mkvenv:main',
         ],
     },
 )
