@@ -8,7 +8,7 @@ from glob import glob
 
 logger = logging.getLogger(__name__)
     
-def main(): #TODO click to show help message and version; also on mksetup and other tools
+def main(): #TODO click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
     '''
     Create or update existing project to match the latest Chicken Turtle project structure.
     

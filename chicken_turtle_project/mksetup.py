@@ -15,14 +15,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Setuptools based setup functions.
-
-See:
-- https://packaging.python.org/en/latest/distributing.html
-- https://github.com/pypa/sampleproject
-"""
-
 from common import get_project, eval_file, configure_logging
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict

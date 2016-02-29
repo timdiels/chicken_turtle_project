@@ -24,6 +24,13 @@ Your source goes in `$project_name`. Use `project.py` to configure
 
 Run `ct-mksetup` to generate/update `setup.py`.
 
+## ct-interpreter
+
+See `ct-interpreter --help`
+
+## Deployment API
+
+
 
 ## Methodology
 
@@ -47,3 +54,10 @@ into a package.
 - output of last test runs is kept in test/last_runs 
 - run_tests.py to run the tests, but you need to run it from withing the venv
   (i.e. `. venv/bin/activate` before running this)
+
+## See also
+
+Python packaging recommendations:
+
+- https://packaging.python.org/en/latest/distributing.html
+- https://github.com/pypa/sampleproject
