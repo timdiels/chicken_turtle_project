@@ -51,7 +51,7 @@ project = dict(
     keywords='',
   
     # Required dependencies
-    install_requires='pypandoc',
+    install_requires='click plumbum chicken_turtle_util',
   
     # Optional dependencies
     extras_require={

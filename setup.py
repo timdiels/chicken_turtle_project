@@ -16,7 +16,7 @@ setup(
     keywords='',
   
     # Required dependencies
-    install_requires='pytest'.split(),
+    install_requires='click plumbum chicken_turtle_util'.split(),
   
     # Optional dependencies
     extras_require={
