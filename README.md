@@ -30,7 +30,7 @@ See `ct-interpreter --help`
 
 ## Deployment API
 
-
+There's a single function that helps with very simple deployments.
 
 ## Methodology
 
@@ -40,6 +40,9 @@ py.test from the project root.
 Package data can be provided by placing a directory named `data` in the package
 with the data files, but no `__init__.py` as that would turn the data directory
 into a package.
+
+`ct-mksetup` should be run before any commit and deployment. For the latter, call
+`ct-mksetup` in your deploy scripts.
 
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If
