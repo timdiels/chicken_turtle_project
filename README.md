@@ -45,10 +45,16 @@ Package data can be provided by placing a directory named `data` in the package
 with the data files, but no `__init__.py` as that would turn the data directory
 into a package.
 
+Simply include test dependencies in install_requires.
+
 `ct-mksetup` should be run before any commit and deployment. For the latter, call
 `ct-mksetup` in your deploy scripts.
 
-Simply include test dependencies in install_requires.
+Chicken Turtle Project does not enforce a particular methodology for deployments, but
+we recommend shell scripts for simple deployments as they don't have dependencies
+(assuming you only deploy to unix-like machines). If you need to do more
+complex work such as migrating data to a new database structure, include a
+Python script and call it from the shell script after having made the venv.
 
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If
