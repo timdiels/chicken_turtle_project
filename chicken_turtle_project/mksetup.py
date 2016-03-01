@@ -20,6 +20,7 @@ from chicken_turtle_util.exceptions import UserException
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
+import plumbum as pb
 import pypandoc
 import os
 import pprint
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     '''
-    Create or update setup.py
+    Create or update setup.py and requirements.txt
     '''
     graceful_main(_main, logger)
     
@@ -43,13 +44,22 @@ def _main():
     name = project['name']
     pkg_root = Path(name)
     
+    # Write requirements.txt
+    logger.debug('requirements.in')
+    requirements_in_path = project_root / 'requirements.in'
+    if not requirements_in_path.exists():
+        raise UserException('{} does not exist'.format(requirements_in_path))
+    pb.local['pip-compile']('requirements.in')
+    
+    # List dependencies
+    logger.debug('requirements.txt')
+    with project_root / 'requirements.txt' as f:
+        project['install_requires'] = list(map(str.strip, f.readlines()))
+    
     # Transform some keys
     logger.debug('Transform some attributes')
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
-    project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()]
-    project['install_requires'] = project['install_requires'].split()
-    if 'extras_require' in project:
-        project['extras_require'] = {k:v.split() for k,v in project['extras_require'].items()}
+    project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
 
     # Version
     logger.debug('Load version')
