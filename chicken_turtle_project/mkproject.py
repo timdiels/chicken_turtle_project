@@ -127,8 +127,8 @@ def _make_project(project_root):
     missing_patterns = gitignore_patterns - patterns
     if missing_patterns:
         logger.info('Inserting missing patterns into .gitignore')
-        with gitignore_path.open('r') as f:
-            f.write('\n'.join(*missing_patterns, content))
+        with gitignore_path.open('w') as f:
+            f.write('\n'.join(list(missing_patterns) + [content]))
     
     # Raise error if missing file
     for file in 'LICENSE.txt README.*'.split():

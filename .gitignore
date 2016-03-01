@@ -1,3 +1,4 @@
+.cache
 *.orig
 *.swp
 .project
