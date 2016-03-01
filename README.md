@@ -61,6 +61,11 @@ leave the original dependency as a comment so you remember the previous version
 constraint when you change it back at release (though you likely need to
 require the version with the changes you made)
 
+Versions should adhere to [PEP-0440](https://www.python.org/dev/peps/pep-0440/)
+and use [semantic versioning](https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred).
+A commit can be versioned by specifying the version as a tag: e.g. `git tag
+v1.0.0-dev1`.
+
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If
   requirements.txt exists, that list of packages will be installed. If

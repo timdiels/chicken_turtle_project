@@ -4,6 +4,9 @@ from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
 from glob import glob
+from versio.version import Version
+from versio.version_scheme import Pep440VersionScheme
+import git
 import plumbum as pb
 import pypandoc
 import click
@@ -16,18 +19,27 @@ logger = logging.getLogger(__name__)
     
 def main(): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
     '''
-    Create or update existing project to match the latest Chicken Turtle project structure and create/update setup.py and requirements.txt
+    Create or update project to match the latest Chicken Turtle project
+    methodology, preparing it for development, deployment or release.
     
-    ct-mkproject must be run from the root of the project. 
+    ct-mkproject must be run from the root of the project (where setup.py should be).
+    
+    The project must be in a git repository. 
     
     The following files are created if missing:
     - project.py
     - $project_name package
-    - $project_name/version.py
     - $project_name/test package
     - requirements.in
+    
+    The following files may be created or updated by merging in changes:
+    - $project_name/__init__.py
     - .gitignore
     - setup.cfg
+    
+    The following files will be created or overwritten if they exist:
+    - requirements.txt
+    - setup.py
     
     ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
     
@@ -40,6 +52,12 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     All dependencies should be listed in a requirements.in. If you want to
     install dependencies as editable, prefix them with -e and provide a path to
     the package.
+    
+    ct-mkproject will update the current version in
+    $project_name/__init__.py:__version__. This is either the version specified
+    by you using `git tag` or the max version in `git tags` with its dev version
+    bumped by 1 (E.g. '1.0.0.dev1' becomes '1.0.0.dev2' and
+    '1.0.0' becomes '1.0.1.dev1').
     '''
     graceful_main(_main, logger)
     
@@ -74,21 +92,32 @@ def _make_project(project_root):
         logger.info('Creating {}'.format(pkg_root_init))
         pkg_root_init.touch()
     
-    # Ensure package root __init__.py imports __version__    
-    import_line = 'from {}.version import __version__'.format(project_name)
+    # Determine current version
+    repo = git.Repo(str(project_root))
+    tags = [Path(tag.name).name for tag in repo.tags]
+    versions = []
+    for tag in tags:
+        try:
+            versions.append(Version(tag[1:], Pep440VersionScheme))
+        except AttributeError as e:
+            logger.warning(str(e)) # XXX replace with a pass once we know this works
+    version = max(versions, default=Version('0.0.0', Pep440VersionScheme))
+    version.bump('dev')
+    project['version'] = str(version)
+    
+    # Set __version__ in package root __init__.py    
+    version_line = version_template.format(project['version'])
     with pkg_root_init.open('r') as f:
-        contents = f.read()
-    if import_line not in map(str.strip, contents.splitlines()):
-        logger.info('Inserting __version__ import in {}'.format(pkg_root_init)) 
-        with pkg_root_init.open('w') as f:
-            f.write(import_line + "\n" + contents)
-        
-    # Create version.py if missing    
-    version_path = pkg_root / 'version.py'
-    if not version_path.exists():
-        logger.info('Creating {}'.format(version_path))
-        with version_path.open('w') as f:
-            f.write(version_template)
+        lines = f.read().splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith('__version__ ='):
+            lines[i] = version_line
+            break
+    else:
+        lines.append(version_line)
+    logger.info('Setting __version__ in {}'.format(pkg_root_init))
+    with pkg_root_init.open('w') as f:
+        f.write('\n'.join(lines))
     
     # Create test package if missing
     test_root = pkg_root / 'test'
@@ -163,15 +192,6 @@ def _make_setup(project, project_root):
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
 
-    # Version
-    try:
-        version_path = pkg_root / 'version.py'
-        project['version'] = eval_file(version_path)['__version__'] #TODO check format
-    except IOError:
-        assert False
-    except KeyError:
-        raise UserException('{} must contain `__version__`'.format(version_path))
-        
     # Packages and package data
     # TODO test:
     # - pkg[init]/pkg[init]/data/derr/data -> only pick the top data
@@ -280,11 +300,8 @@ project = dict(
 """.lstrip()
 
 version_template = """
-# Versions should comply with PEP440.
-# https://www.python.org/dev/peps/pep-0440/
-# https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred
-__version__ = '1.0.0.dev1'
-""".lstrip()
+__version__ = '{}'  # Auto generated by ct-mksetup, do not edit this line, instead use `git tag v{{version}}`, e.g. `git tag v1.0.0-dev1`.
+""".strip()
 
 setup_cfg_template = """
 [pytest]

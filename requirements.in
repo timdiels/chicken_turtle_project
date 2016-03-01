@@ -3,3 +3,5 @@ click
 plumbum
 pytest
 pypandoc
+GitPython
+versio

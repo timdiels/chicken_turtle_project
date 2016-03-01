@@ -39,7 +39,7 @@ setup(
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'install_requires': 'chicken_turtle_util\nclick\nplumbum\npytest\npypandoc',
+    'install_requires': 'chicken_turtle_util\nclick\nplumbum\npytest\npypandoc\nGitPython\nversio',
     'keywords': '',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'
@@ -117,6 +117,14 @@ setup(
                         'release (though you likely need to require the version with the changes\n'
                         'you made)\n'
                         '\n'
+                        'Versions should adhere to\n'
+                        '`PEP-0440 <https://www.python.org/dev/peps/pep-0440/>`__ and use\n'
+                        '`semantic\n'
+                        'versioning '
+                        '<https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred>`__.\n'
+                        'A commit can be versioned by specifying the version as a tag: e.g.\n'
+                        '``git tag v1.0.0-dev1``.\n'
+                        '\n'
                         'Old notes (TODO rm)\n'
                         '-------------------\n'
                         '\n'
@@ -144,5 +152,5 @@ setup(
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '1.0.0.dev1'}
+    'version': '0.0.0.dev1'}
 )
