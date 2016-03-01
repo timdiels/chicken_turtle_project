@@ -9,6 +9,7 @@ import pypandoc
 import click
 import pprint
 import os
+import re
 
 import logging
 logger = logging.getLogger(__name__)
@@ -149,9 +150,14 @@ def _make_setup(project, project_root):
     # List dependencies
     logger.info('Preparing to write setup.py')
     with (project_root / 'requirements.in').open('r') as f:
-        #TODO test with file with -e and normal and line and inline comments
-        # TODO replace -e ... with pkg name
-        project['install_requires'] = f.read()
+        # TODO test with file with -e and normal and line and inline comments
+        lines = list(map(str.strip, f.readlines()))
+        for i, line in enumerate(lines):
+            if line.startswith('-e'):
+                path = re.match('-e\s+([^#]+)', line).group(1).strip()
+                name = pb.local['python'](Path(path) / 'setup.py', '--name').strip()
+                lines[i] = name
+        project['install_requires'] = '\n'.join(lines) 
     
     # Transform some keys
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
