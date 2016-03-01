@@ -1,16 +1,17 @@
-from chicken_turtle_project.common import configure_logging
+from chicken_turtle_project.common import graceful_main
 from pathlib import Path
 import logging
 import plumbum as pb
 
 logger = logging.getLogger(__name__)
     
-def main(): #TODO click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
+def main():
     '''
     Create Python virtual environment in $project_root/venv and install project in the venv
     '''
-    configure_logging()
+    graceful_main(_main, logger)
     
+def _main():
     # Find the desired Python
     desired_python = 'python3.4'
     python = pb.local.get(desired_python, 'python3', 'python')
@@ -18,14 +19,18 @@ def main(): #TODO click to show help message and version; also on mksetup and ot
         logger.warning('{} not found, falling back to {}'.format(desired_python, python.executable))
         
     # Create or update venv
+    
     project_root = Path.cwd()
     with pb.local.cwd(project_root):
         # TODO first rm venv if --clean is supplied
         if not Path('venv').exists():
+            logger.info('Creating venv')
             python('-m', 'venv', 'venv')
+        logger.info('Installing dependencies')
         pip_install = pb.local['venv/bin/pip']['install']
         pip_install('--upgrade', 'pip', 'setuptools')
         pip_install('-r', 'requirements.txt')
+        logger.info('Installing project package')
         pip_install('-e', '.') #TODO only when -e --editable is supplied to us
     
     # TODO support sip dependencies
