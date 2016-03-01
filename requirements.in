@@ -1,0 +1,5 @@
+-e ../chicken_turtle_util
+click
+plumbum
+pytest
+pypandoc

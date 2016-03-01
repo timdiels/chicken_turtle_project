@@ -35,13 +35,17 @@ def main(): #TODO click to show help message and version; also on mksetup and ot
     - README.*
     
     py.test will be configured to run test in $project_name.test and subpackages
+    
+    All dependencies should be listed in a requirements.in. If you want to
+    install dependencies as editable, prefix them with -e and provide a path to
+    the package.
     '''
     graceful_main(_main, logger)
     
 def _main():
     project_root = Path.cwd()
-    _make_project(project_root)
-    _make_setup(project_root)
+    project = _make_project(project_root)
+    _make_setup(project, project_root)
     
 def _make_project(project_root):
     # Create project if missing
@@ -60,93 +64,100 @@ def _make_project(project_root):
     
     # Create package dir if missing
     if not pkg_root.exists():
+        logger.info('Creating {}'.format(pkg_root))
         pkg_root.mkdir()
     
     # Ensure package root __init__.py exists
     pkg_root_init = pkg_root / '__init__.py'
     if not pkg_root_init.exists():
+        logger.info('Creating {}'.format(pkg_root_init))
         pkg_root_init.touch()
     
     # Ensure package root __init__.py imports __version__    
     import_line = 'from {}.version import __version__'.format(project_name)
     with pkg_root_init.open('r') as f:
         contents = f.read()
-    if import_line not in map(str.strip, contents.splitlines()): 
+    if import_line not in map(str.strip, contents.splitlines()):
+        logger.info('Inserting __version__ import in {}'.format(pkg_root_init)) 
         with pkg_root_init.open('w') as f:
             f.write(import_line + "\n" + contents)
         
     # Create version.py if missing    
     version_path = pkg_root / 'version.py'
     if not version_path.exists():
+        logger.info('Creating {}'.format(version_path))
         with version_path.open('w') as f:
             f.write(version_template)
     
     # Create test package if missing
     test_root = pkg_root / 'test'
     if not test_root.exists():
+        logger.info('Creating {}'.format(test_root))
         test_root.mkdir()
     
     test_root_init = test_root / '__init__.py'
     if not test_root_init.exists():
+        logger.info('Creating {}'.format(test_root_init))
         test_root_init.touch()
         
     # Create requirements.in if missing
     requirements_in_path = project_root / 'requirements.in'
     if not requirements_in_path.exists():
+        logger.info('Creating requirements.in')
         requirements_in_path.touch()
         
     # Create setup.cfg if missing
     setup_cfg_path = project_root / 'setup.cfg'
     if not setup_cfg_path.exists():
+        logger.info('Creating setup.cfg')
         with setup_cfg_path.open('w') as f:
-            f.write(setup_cfg_template)
+            f.write(setup_cfg_template.format(project_name))
         
     # Create .gitignore if missing
     gitignore_path = project_root / '.gitignore'
     if not gitignore_path.exists():
+        logger.info('Creating .gitignore')
         gitignore_path.touch()
     
     # Ensure the right patterns are present in .gitignore
     with gitignore_path.open('r') as f:
         content = f.read()
-    patterns = set(map(str.strip, content.readlines()))
+    patterns = set(map(str.strip, content.splitlines()))
     missing_patterns = gitignore_patterns - patterns
     if missing_patterns:
+        logger.info('Inserting missing patterns into .gitignore')
         with gitignore_path.open('r') as f:
             f.write('\n'.join(*missing_patterns, content))
     
     # Raise error if missing file
-    for file in 'LICENSE.txt README.*':
+    for file in 'LICENSE.txt README.*'.split():
         if not glob(file):
-            raise UserException()
-            logger.warning("Missing file: {}".format(file))
-            
-def _make_setup(project_root):
-    '''Expects to runs after _make_project'''
-    #TODO ensure the readme_file is mentioned in MANIFEST.in
+            raise UserException("Missing file: {}".format(file))
     
-    # Load project info
-    logger.debug('Load project info')
-    project = get_project()
+    return project
+            
+def _make_setup(project, project_root):
+    '''Expects to run after _make_project'''
+    
     name = project['name']
     pkg_root = Path(name)
     
     # Write requirements.txt
-    logger.debug('requirements.in')
+    logger.info('Writing requirements.txt')
     pb.local['pip-compile']('requirements.in')
     
     # List dependencies
-    logger.debug('requirements.txt')
-    with project_root / 'requirements.txt' as f:
-        project['install_requires'] = list(map(str.strip, f.readlines()))
+    logger.info('Preparing to write setup.py')
+    with (project_root / 'requirements.in').open('r') as f:
+        #TODO test with file with -e and normal and line and inline comments
+        # TODO replace -e ... with pkg name
+        project['install_requires'] = f.read()
     
     # Transform some keys
-    logger.debug('Transform some attributes')
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
 
     # Version
-    logger.debug('Load version')
     try:
         version_path = pkg_root / 'version.py'
         project['version'] = eval_file(version_path)['__version__'] #TODO check format
@@ -156,7 +167,6 @@ def _make_setup(project_root):
         raise UserException('{} must contain `__version__`'.format(version_path))
         
     # Packages and package data
-    logger.debug('Packages and package data')
     # TODO test:
     # - pkg[init]/pkg[init]/data/derr/data -> only pick the top data
     # - pkg[init]/notpkg/data -> don't pick data dir as it's not child of a package
@@ -179,7 +189,7 @@ def _make_setup(project_root):
     
     # Write setup.py
     del project['readme_file']
-    logger.debug('Writing setup.py')
+    logger.info('Writing setup.py')
     with (project_root / 'setup.py').open('w') as f:
         f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
         

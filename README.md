@@ -56,6 +56,11 @@ we recommend shell scripts for simple deployments as they don't have dependencie
 complex work such as migrating data to a new database structure, include a
 Python script and call it from the shell script after having made the venv.
 
+When making dependency in requirements.in editable (e.g. -e path/to/setup_dir),
+leave the original dependency as a comment so you remember the previous version
+constraint when you change it back at release (though you likely need to
+require the version with the changes you made)
+
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If
   requirements.txt exists, that list of packages will be installed. If

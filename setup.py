@@ -36,12 +36,10 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
-    'entry_points': {   'console_scripts': [   'ct-mksetup = chicken_turtle_project.mksetup:main',
-                                               'ct-mkproject = chicken_turtle_project.mkproject:main',
+    'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'extras_require': {'dev': []},
-    'install_requires': ['click', 'plumbum', 'chicken_turtle_util', 'pytest'],
+    'install_requires': '-e ../chicken_turtle_util\nclick\nplumbum\npytest\npypandoc\n',
     'keywords': '',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'
@@ -113,6 +111,12 @@ setup(
                         'a new database structure, include a Python script and call it from the\n'
                         'shell script after having made the venv.\n'
                         '\n'
+                        'When making dependency in requirements.in editable (e.g. -e\n'
+                        'path/to/setup\\_dir), leave the original dependency as a comment so you\n'
+                        'remember the previous version constraint when you change it back at\n'
+                        'release (though you likely need to require the version with the changes\n'
+                        'you made)\n'
+                        '\n'
                         'Old notes (TODO rm)\n'
                         '-------------------\n'
                         '\n'
@@ -137,8 +141,8 @@ setup(
                         '-  https://packaging.python.org/en/latest/distributing.html\n'
                         '-  https://github.com/pypa/sampleproject\n',
     'name': 'chicken_turtle_project',
-    'package_data': {'chicken_turtle_project.test': []},
+    'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
     'version': '1.0.0.dev1'}
-) 
+)

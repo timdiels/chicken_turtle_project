@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 
-ct-mksetup
+ct-mkproject
 ct-mkvenv -e
 venv/bin/py.test

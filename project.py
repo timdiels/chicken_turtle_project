@@ -49,14 +49,6 @@ project = dict(
      
     # What does your project relate to?
     keywords='',
-  
-    # Required dependencies
-    install_requires='click plumbum chicken_turtle_util pytest pypandoc',
-  
-    # Optional dependencies
-    extras_require={
-        'dev': '',
-    },
     
     # Auto generate entry points
     entry_points={

@@ -54,7 +54,7 @@ def get_project():
         raise UserException('project.py must export a `project` variable (with a dict)')
     
     # Attributes that must be present
-    for attr in 'name readme_file description author author_email url license classifiers install_requires keywords'.split():
+    for attr in 'name readme_file description author author_email url license classifiers keywords'.split():
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
     
@@ -75,10 +75,16 @@ def get_project():
     elif 'install_requires' in project:
         raise UserException('Encountered `install_requires` in `project`. Specify these in requirements.in instead.')
     
+    #TODO ensure the readme_file is mentioned in MANIFEST.in
+    
     return project
     
-def graceful_main(main, logger, debug=True):
-    logging.basicConfig(level=logging.DEBUG)
+def graceful_main(main, logger, debug=False):
+    if debug:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    logging.basicConfig(level=level)
     try:
         main()
     except UserException as ex:
