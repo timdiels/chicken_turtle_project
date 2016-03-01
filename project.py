@@ -61,7 +61,6 @@ project = dict(
     # Auto generate entry points
     entry_points={
         'console_scripts': [
-            'ct-mksetup = chicken_turtle_project.mksetup:main',
             'ct-mkproject = chicken_turtle_project.mkproject:main',
             'ct-mkvenv = chicken_turtle_project.mkvenv:main',
             'ct-interpreter = chicken_turtle_project.interpreter:main',
