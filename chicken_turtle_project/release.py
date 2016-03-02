@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from common import graceful_main, get_repo, get_newest_version, get_current_version, version_from_tag, get_project
+from chicken_turtle_project.common import graceful_main, get_repo, get_newest_version, get_current_version, get_project
 from pathlib import Path
 import plumbum as pb
 import logging
@@ -34,11 +34,9 @@ def main():
     graceful_main(_main, logger)
     
 def _main():
+    # Note: The pre-commit hook already does most of the project validation
     project_root = Path.cwd()
-    
-    # Ensure project is up to date and valid
-    pb.local['ct-mkproject']()
-    project = get_project()
+    project = get_project(project_root)
     
     # Working directory must be clean (no untracked/modified files)
     repo = get_repo(project_root)
@@ -49,24 +47,8 @@ def _main():
     version = get_current_version(repo)
     if not version:
         raise UserException('Please assign a version with `git tag v{{version}}, newest version is {}`'.format(str(get_newest_version())))
-
-    # Warn if current version is less than that of any ancestor commit
-    ancestors = list(repo.commit().iter_parents())
-    versions = []
-    for tag in repo.tags:
-        if tag.commit in ancestors:
-            try:
-                versions.append(version_from_tag(tag))
-            except AttributeError:
-                pass
-    newest_ancestor_version = max(versions)
-    if version < newest_ancestor_version:
-        logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
-        if not click.confirm('Do you want to release anyway?'):
-            logger.info('Release cancelled')
-            return
     
-    return
+    assert False
     # Release to test index (if any)
     index_name = project['index_test']
     if index_name:

@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version
+from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -152,6 +152,23 @@ def _make_project(project_root):
     for file in 'LICENSE.txt README.*'.split():
         if not glob(file):
             raise UserException("Missing file: {}".format(file))
+        
+    # If version tag, warn if it is less than that of an ancestor commit 
+    version = get_current_version()
+    if version:
+        ancestors = list(repo.commit().iter_parents())
+        versions = []
+        for tag in repo.tags:
+            if tag.commit in ancestors:
+                try:
+                    versions.append(version_from_tag(tag))
+                except AttributeError:
+                    pass
+        newest_ancestor_version = max(versions)
+        if version < newest_ancestor_version:
+            logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
+            if not click.confirm('Do you want to continue anyway?'):
+                raise UserException('Cancelled')
     
     return project
 
