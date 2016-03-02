@@ -1,12 +1,10 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, eval_file, graceful_main
+from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
 from glob import glob
-from versio.version import Version
-from versio.version_scheme import Pep440VersionScheme
-import git
+from urllib.parse import urlparse
 import plumbum as pb
 import pypandoc
 import click
@@ -93,17 +91,12 @@ def _make_project(project_root):
         pkg_root_init.touch()
     
     # Determine current version
-    repo = git.Repo(str(project_root))
-    tags = [Path(tag.name).name for tag in repo.tags]
-    versions = []
-    for tag in tags:
-        try:
-            versions.append(Version(tag[1:], Pep440VersionScheme))
-        except AttributeError as e:
-            logger.warning(str(e)) # XXX replace with a pass once we know this works
-    version = max(versions, default=Version('0.0.0', Pep440VersionScheme))
-    version.bump('dev')
-    project['version'] = str(version)
+    repo = get_repo(project_root)
+    version = get_current_version(repo)
+    if not version:
+        version = get_newest_version(project_root)
+        version.bump('dev')
+    project['version'] = str(version) #TODO no bump if tag is of last commit
     
     # Set __version__ in package root __init__.py    
     version_line = version_template.format(project['version'])
@@ -213,6 +206,14 @@ def _make_setup(project, project_root):
                     package_data[parent.replace('/', '.')].extend(str(Path(parent2) / file) for file in files2)
     project['package_data'] = dict(package_data)
     
+    # Add download_url if current commit is version tagged
+    repo = get_repo(project_root)
+    version = get_current_version(repo)
+    if version:
+        project['download_url'] = project['download_url'].format(version=str(version))
+    else:
+        del project['download_url']
+    
     # Write setup.py
     del project['readme_file']
     logger.info('Writing setup.py')
@@ -237,10 +238,18 @@ project = dict(
     author_email='your_email@example.com',
     readme_file='README.md',
     url='https://example.com/project/home', # project homepage
+    download_url='https://example.com/repo/{{version}}', # Template for url to download source archive from. You can refer to the current version with {{version}}. You can get one from github or gitlab for example.
     license='LGPL3',
  
     # What does your project relate to?
     keywords='keyword1 key-word2',
+    
+    # Package indices to release to using `ct-release`
+    # These names refer to those defined in ~/.pypirc.
+    # For pypi, see http://peterdowns.com/posts/first-time-with-pypi.html
+    # For devpi, see http://doc.devpi.net/latest/userman/devpi_misc.html#using-plain-setup-py-for-uploading
+    index_test = 'pypitest'  # Index to use for testing a release, before releasing to `index_production`
+    index_production = 'pypi'
     
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     # Note: you must add ancestors of any applicable classifier too
@@ -276,19 +285,6 @@ project = dict(
         Programming Language :: Python :: Implementation :: CPython
         Programming Language :: Python :: Implementation :: Stackless
     ''',
- 
-    # Required dependencies
-    setup_requires='pypandoc'.split(), # required to run setup.py. I'm not aware of any setup tool that uses this though
-    install_requires=(
-        'pypi-dep-1 pypydep2 '
-        'moredeps '
-    ),
- 
-    # Optional dependencies
-    extras_require={
-        'dev': '',
-        'test': 'pytest pytest-benchmark pytest-timeout pytest-xdist freezegun',
-    },
  
     # Auto generate entry points
     entry_points={
