@@ -4,7 +4,6 @@ from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
 from glob import glob
-from urllib.parse import urlparse
 from configparser import ConfigParser
 import plumbum as pb
 import pypandoc
