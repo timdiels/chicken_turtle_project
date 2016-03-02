@@ -68,18 +68,19 @@ def _main():
     
     return
     # Release to test index (if any)
-    logger.info('Releasing to test index')
     index_name = project['index_test']
     if index_name:
-        pass
-#         python setup.py register -r pypitest
-#         python setup.py sdist upload -r pypitest
+        _release(index_name)
     
     # Release to production index
-    logger.info('Releasing to production index')
-    project['index_production']
-#     python setup.py register -r pypi
-#     python setup.py sdist upload -r pypi
-    
+    _release(project['index_production'])
     logger.info('Released')
+    
+def _release(index_name): #TODO don't forget to mock this in tests, do not want to actually release
+    logger.info('Releasing to production index')
+    setup = pb.local['python']['setup.py']
+    setup('register', '-r', index_name)
+    setup('sdist', 'upload', '-r', index_name)
+    
+    
     
