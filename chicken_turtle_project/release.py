@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from common import graceful_main, get_repo, get_newest_version, get_current_version, version_from_tag
+from common import graceful_main, get_repo, get_newest_version, get_current_version, version_from_tag, get_project
 from pathlib import Path
 import plumbum as pb
 import logging
@@ -38,6 +38,7 @@ def _main():
     
     # Ensure project is up to date and valid
     pb.local['ct-mkproject']()
+    project = get_project()
     
     # Working directory must be clean (no untracked/modified files)
     repo = get_repo(project_root)
@@ -68,11 +69,15 @@ def _main():
     return
     # Release to test index (if any)
     logger.info('Releasing to test index')
-#     python setup.py register -r pypitest
-#     python setup.py sdist upload -r pypitest
+    index_name = project['index_test']
+    if index_name:
+        pass
+#         python setup.py register -r pypitest
+#         python setup.py sdist upload -r pypitest
     
     # Release to production index
     logger.info('Releasing to production index')
+    project['index_production']
 #     python setup.py register -r pypi
 #     python setup.py sdist upload -r pypi
     

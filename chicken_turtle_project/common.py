@@ -60,7 +60,7 @@ def get_project():
         raise UserException('project.py must export a `project` variable (with a dict)')
     
     # Attributes that must be present
-    for attr in 'name readme_file description author author_email url license classifiers keywords download_url'.split():
+    for attr in 'name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split():
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
     
