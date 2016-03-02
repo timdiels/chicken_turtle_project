@@ -55,6 +55,7 @@ project = dict(
         'console_scripts': [
             'ct-mkproject = chicken_turtle_project.mkproject:main',
             'ct-mkvenv = chicken_turtle_project.mkvenv:main',
+            'ct-release = chicken_turtle_project.release:main',
             'ct-interpreter = chicken_turtle_project.interpreter:main',
         ],
     },

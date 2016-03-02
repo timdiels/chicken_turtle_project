@@ -17,10 +17,16 @@
 
 from pathlib import Path
 from chicken_turtle_util.exceptions import UserException, log_exception
+from versio.version import Version
+from versio.version_scheme import Pep440VersionScheme
+from functools import partial
+import git
 import sys
 
 import logging
 logger = logging.getLogger(__name__)
+
+Version = partial(Version(scheme=Pep440VersionScheme))
 
 def eval_file(path):
     with path.open() as f:
@@ -54,7 +60,7 @@ def get_project():
         raise UserException('project.py must export a `project` variable (with a dict)')
     
     # Attributes that must be present
-    for attr in 'name readme_file description author author_email url license classifiers keywords'.split():
+    for attr in 'name readme_file description author author_email url license classifiers keywords download_url'.split():
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
     
@@ -93,4 +99,49 @@ def graceful_main(main, logger, debug=False):
     except Exception as ex:
         logger.exception(ex)
         sys.exit(2)
+
+def get_repo(project_root):
+    return git.Repo(str(project_root))
+
+def version_from_tag(tag):
+    '''
+    Returns versio.version.Version, raises AttributeError if not a version tag
+    '''
+    name = Path(tag.name).name
+    if name[0] != 'v':
+        raise AttributeError('{} is not a version tag'.format(tag))
+    return Version(name[1:])
+
+def get_current_version(repo):
+    '''
+    Get current version by git tag of current commit
+    
+    Returns None if no version
+    '''
+    current_commit = repo.commit()  # the checked out commit
+    version = None
+    for tag in repo.tags:
+        if tag.commit == current_commit:
+            try:
+                version_ = version_from_tag(tag)
+                if version:
+                    raise UserException('Checked out commit has multiple version tags, there can be only one')
+                version = version_
+            except AttributeError:
+                pass
+    return version
+    
+def get_newest_version(repo):
+    '''
+    Get newest version in git tags, returns a default version if no version tags found
+    '''
+    versions = []
+    for tag in repo.tags:
+        try:
+            versions.append(version_from_tag(tag))
+        except AttributeError as e:
+            logger.warning(str(e)) # XXX replace with a pass once we know this works
+    version = max(versions, default=Version('0.0.0'))
+    return version
+    
     
