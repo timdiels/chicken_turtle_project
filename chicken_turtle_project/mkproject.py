@@ -178,11 +178,14 @@ def _make_project(project_root):
                 raise UserException('Cancelled')
             
     # Install pre-commit hook if none exists
+    # TODO test if setup.py changes during pre-commit, do those changes get included automatically? In our case they should
     pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
     if not pre_commit_hook_path.exists():
         with pre_commit_hook_path.open('w') as f:
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
+    
+    # TODO check that source files have correct copyright header
     
     return project
 
