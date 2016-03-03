@@ -101,7 +101,7 @@ def _make_project(project_root):
     repo = get_repo(project_root)
     version = get_current_version(repo)
     if not version:
-        version = get_newest_version(project_root)
+        version = get_newest_version(repo)
         version.bump('dev')
     project['version'] = str(version) #TODO no bump if tag is of last commit
     
@@ -161,7 +161,7 @@ def _make_project(project_root):
             raise UserException("Missing file: {}".format(file))
         
     # If version tag, warn if it is less than that of an ancestor commit 
-    version = get_current_version()
+    version = get_current_version(repo)
     if version:
         ancestors = list(repo.commit().iter_parents())
         versions = []
@@ -204,10 +204,10 @@ def _update_setup_cfg(project_root, project):
             config.add_section(section_name)
             
     # Update options
-    if not config.get('pytest', 'addopts'):
-        config.set('pytest', 'addopts', '--basetemp=last_test_runs')
-    config.set('pytest', 'testpaths', '{}/test'.format(project['name']))
-    config.set('metadata', 'description-file', project['readme_file'])
+    if 'addopts' not in config['pytest']:
+        config['pytest']['addopts'] = '--basetemp=last_test_runs'
+    config['pytest']['testpaths'] = '{}/test'.format(project['name'])
+    config['metadata']['description-file'] = project['readme_file']
     
     # Write updated
     logger.info('Writing setup.cfg')
@@ -305,8 +305,8 @@ project = dict(
     # These names refer to those defined in ~/.pypirc.
     # For pypi, see http://peterdowns.com/posts/first-time-with-pypi.html
     # For devpi, see http://doc.devpi.net/latest/userman/devpi_misc.html#using-plain-setup-py-for-uploading
-    index_test = 'pypitest'  # Index to use for testing a release, before releasing to `index_production`. `index_test` can be set to None if you have no test index
-    index_production = 'pypi'
+    index_test = 'pypitest',  # Index to use for testing a release, before releasing to `index_production`. `index_test` can be set to None if you have no test index
+    index_production = 'pypi',
     
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     # Note: you must add ancestors of any applicable classifier too
@@ -344,11 +344,11 @@ project = dict(
     ''',
  
     # Auto generate entry points
-    entry_points={
+    entry_points={{
         'console_scripts': [
             'mycli = project_name.main:main', # just an example, any module will do, this template doesn't care where you put it
         ],
-    },
+    }},
 )
 """.lstrip()
 

@@ -38,6 +38,7 @@ setup(
     'description': 'Python 3 project development tools',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
+                                               'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
     'install_requires': 'chicken_turtle_util\nclick\nplumbum\npytest\npypandoc\nGitPython\nversio',
     'keywords': '',

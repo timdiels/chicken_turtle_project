@@ -26,9 +26,9 @@ import sys
 import logging
 logger = logging.getLogger(__name__)
 
-Version = partial(Version(scheme=Pep440VersionScheme))
+Version = partial(Version, scheme=Pep440VersionScheme)
 
-def eval_file(path):
+def eval_file(path): #TODO move into chicken turtle util
     with path.open() as f:
         code = compile(f.read(), str(path), 'exec')
         locals_ = {}
@@ -103,22 +103,36 @@ def graceful_main(main, logger, debug=False):
 def get_repo(project_root):
     return git.Repo(str(project_root))
 
-def version_from_tag(tag):
+def get_current_commit(repo):
     '''
-    Returns versio.version.Version, raises AttributeError if not a version tag
+    Get currently checked out commit
+    
+    Returns
+    -------
+    git.Commit
+        The currently checked out commit or None if repo is empty.
     '''
-    name = Path(tag.name).name
-    if name[0] != 'v':
-        raise AttributeError('{} is not a version tag'.format(tag))
-    return Version(name[1:])
-
+    if repo.heads:
+        repo.commit()
+    else:
+        return None
+    
 def get_current_version(repo):
     '''
     Get current version by git tag of current commit
     
-    Returns None if no version
+    Parameters
+    ----------
+    repo : git.Repo
+    
+    Returns
+    -------
+    versio.version.Version
+        None if no version, version otherwise
     '''
-    current_commit = repo.commit()  # the checked out commit
+    current_commit = get_current_commit(repo)  # the checked out commit
+    if not current_commit:
+        return None
     version = None
     for tag in repo.tags:
         if tag.commit == current_commit:
@@ -133,7 +147,16 @@ def get_current_version(repo):
     
 def get_newest_version(repo):
     '''
-    Get newest version in git tags, returns a default version if no version tags found
+    Get newest version in git tags, returns
+    
+    Parameters
+    ----------
+    repo : git.Repo
+    
+    Returns
+    -------
+    versio.version.Version
+        A default version if no version tags found, newest version otherwise
     '''
     versions = []
     for tag in repo.tags:
@@ -144,4 +167,22 @@ def get_newest_version(repo):
     version = max(versions, default=Version('0.0.0'))
     return version
     
+def version_from_tag(tag):
+    '''
+    Get version from version tag
+    
+    Returns
+    -------
+    versio.version.Version
+        The version the version tag represents 
+    
+    Raises
+    ------
+    AttributeError
+        If tag name is not of format v{version}, i.e. not a version tag
+    '''
+    name = Path(tag.name).name
+    if name[0] != 'v':
+        raise AttributeError('{} is not a version tag'.format(tag))
+    return Version(name[1:])
     

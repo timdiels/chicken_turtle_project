@@ -58,7 +58,7 @@ def _main():
     _release(project['index_production'])
     logger.info('Released')
     
-def _release(index_name): #TODO don't forget to mock this in tests, do not want to actually release
+def _release(index_name):
     logger.info('Releasing to production index')
     setup = pb.local['python']['setup.py']
     setup('register', '-r', index_name)

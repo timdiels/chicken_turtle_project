@@ -42,10 +42,11 @@ project = dict(
     description="Python 3 project development tools",
     author='Tim Diels',
     author_email='timdiels.m@gmail.com',
- 
-    url='https://github.com/timdiels/chicken_turtle_project', # project homepage
-  
     license='LGPL3',
+    url='https://github.com/timdiels/chicken_turtle_project', # project homepage
+    download_url='https://github.com/timdiels/chicken_turtle_project/releases/v{version}',
+    index_test='pypitest',
+    index_production='pypi',
      
     # What does your project relate to?
     keywords='',
