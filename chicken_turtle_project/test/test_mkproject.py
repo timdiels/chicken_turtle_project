@@ -1,5 +1,6 @@
 from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager
+from checksumdir import dirhash
 import itertools
 import pytest
 import pprint
@@ -158,6 +159,40 @@ def tmpcwd(request, tmpdir):
     request.addfinalizer(lambda: os.chdir(str(original_cwd)))
     return tmpdir
 
+## util ######################
+
+# Reusable outside testing too
+
+def write_file(path, contents):
+    with Path(path).open('w') as f:
+        f.write(contents)
+        
+import hashlib
+def file_hash(path):
+    '''
+    Get SHA512 checksum of file
+    
+    Parameters
+    ----------
+    path : pathlib.Path
+    
+    Returns
+    -------
+    hash object
+        hash of file contents
+        
+    See also
+    --------
+    checksumdir.dirhash (TODO or change interface such that it allows directories too, derring to dirhash)
+    '''
+    with path.open('rb') as f:
+        hash_ = hashlib.sha512()
+        while True:
+            buffer = f.read(65536)
+            hash_.update(buffer)
+            if not buffer:
+                return hash
+
 ## setup util ###########################################
 
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
@@ -183,17 +218,16 @@ def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has
 
 def write_project(project):
     write_file('project.py', 'project = ' + pprint.pformat(project))
-    
-def write_file(path, contents):
-    with Path(path).open('w') as f:
-        f.write(contents)
 
 ## assertion util ##############################
 
 @contextmanager
-def assert_file_access(*files, read=None, written=None, stat_changed=None):
+def assert_file_access(*files, read=None, written=None, stat_changed=None, contents_changed=None):
     '''
     Assert particular file access does (not) occur
+    
+    `contents_changed` is a more stringent condition than `written` as `written=True` 
+    only requires the file to have been written to, not to have actually changed.
     
     Parameters
     ----------
@@ -203,11 +237,18 @@ def assert_file_access(*files, read=None, written=None, stat_changed=None):
     written : bool
         If True, file must have been written (mtime, contents changed) to, if False, it musn't have been written to, else either is fine.
     stat_changed : bool
-        If True, file must have been changed (ctime, meta info changed, e.g. chmod), if False it musn't have been changed, else either is fine. 
+        If True, file must have been changed (ctime, meta info changed, e.g. chmod), if False it musn't have been changed, else either is fine.
+    contents_changed : bool
+        If True, file contents must differ from original, if False, they may not differ, else either is fine.
     '''
     assert files
     stats = [Path(file).stat() for file in files]
+    if contents_changed is not None:
+        checksums = [file_hash(Path(file)) for file in files]
+        
     yield
+    
+    # read, written, stat_changed
     new_stats = [Path(file).stat() for file in files]
     for old, new in zip(stats, new_stats):
         if read:
@@ -224,6 +265,37 @@ def assert_file_access(*files, read=None, written=None, stat_changed=None):
             assert old.st_ctime_ns != new.st_ctime_ns
         elif stat_changed == False:
             assert old.st_ctime_ns == new.st_ctime_ns
+            
+    # contents_changed
+    if contents_changed is not None:
+        new_checksums = [file_hash(Path(file)) for file in files]
+        for old, new in zip(checksums, new_checksums):
+            if contents_changed:
+                assert old != new
+            else:
+                assert old == new
+                
+@contextmanager
+def assert_directory_contents(path, changed=True):
+    '''
+    Assert directory contents change or remain the same.
+    
+    Contents are compared deeply, i.e. recursively and file contents are considered as well.
+    
+    Parameters
+    ----------
+    path : Path
+        Path to directory
+    changed : bool
+        If True, directory contents must change, else contents must remain the same.
+    '''
+    old = dirhash(str(path), 'sha512')
+    yield
+    new = dirhash(str(path), 'sha512')
+    if changed:
+        assert old != new
+    else:
+        assert old == new
 
 @contextmanager
 def assert_process_fails(stderr_matches):
@@ -260,7 +332,7 @@ def test_project_present(tmpcwd):
     When project lacks optional attributes, succeed.
     '''
     create_project()
-    with assert_file_access('project.py', written=False):
+    with assert_file_access('project.py', contents_changed=False):
         mkproject & pb.FG
         
 def test_project_undefined(tmpcwd):
@@ -314,9 +386,12 @@ def test_project_attr_has_invalid_value(tmpcwd, attr, value):
     with assert_process_fails(stderr_matches=attr):
         mkproject()
     
-# def test_idempotent(tmpdir):
-#     '''
-#     Running mkproject twice is the same as running it once, in any case
-#     '''
-#     assert False
+def test_idempotent(tmpcwd):
+    '''
+    Running mkproject twice is the same as running it once, in any case
+    '''
+    create_project()
+    mkproject()
+    with assert_directory_contents(Path('.'), changed=False):
+        mkproject()
     

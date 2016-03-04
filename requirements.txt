@@ -5,6 +5,7 @@
 #    pip-compile requirements.in
 #
 -e file:///mnt/data/doc/eclipse_workspace/chicken_turtle_util
+checksumdir==1.0.5
 click==6.3
 first==2.0.1              # via pip-tools
 gitdb==0.6.4              # via gitpython

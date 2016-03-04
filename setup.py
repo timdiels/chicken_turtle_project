@@ -40,8 +40,16 @@ setup(
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'install_requires': 'chicken_turtle_util\nclick\nplumbum\npytest\npypandoc\nGitPython\nversio\npip-tools',
-    'keywords': '',
+    'install_requires': 'chicken_turtle_util\n'
+                        'click\n'
+                        'plumbum\n'
+                        'pytest\n'
+                        'pypandoc\n'
+                        'GitPython\n'
+                        'versio\n'
+                        'pip-tools\n'
+                        'checksumdir',
+    'keywords': 'development release setuptools tools',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'
                         'chicken.\n'
