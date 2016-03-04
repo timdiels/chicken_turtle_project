@@ -7,12 +7,8 @@ import pprint
 '''
 error = UserException usually
     
-'\s*' and None are invalid attr values, however index_test allows None, should error
-
+'\s*' and None are invalid attr values, however index_test allows None, other should error
 When whitespace or dashes in project[name], error 
-    
-When `project` contains an unknown attribute, error
-    'license version package_data packages long_description extras_require install_requires unknown'
 
 The following files are created if missing:
 - project.py
@@ -273,16 +269,28 @@ def test_project_undefined(tmpcwd):
     with assert_process_fails(stderr_contains='must export a `project` variable'):
         mkproject()
         
-@pytest.mark.parametrize('project_required_attr', project1.keys())
-def test_project_missing_required_attr(tmpcwd, project_required_attr):
+@pytest.mark.parametrize('required_attr', project1.keys())
+def test_project_missing_required_attr(tmpcwd, required_attr):
     '''
     When `project` lacks a required attribute, abort
     '''
     create_project()
     project = project1.copy()
-    del project[project_required_attr]
+    del project[required_attr]
     write_project(project)
-    with assert_process_fails(stderr_contains='Missing required attribute: project["{}"]'.format(project_required_attr)):
+    with assert_process_fails(stderr_contains='Missing required attribute: project["{}"]'.format(required_attr)):
+        mkproject()
+        
+@pytest.mark.parametrize('unknown_attr', 'version package_data packages long_description extras_require install_requires unknown'.split())
+def test_project_has_unknown_attr(tmpcwd, unknown_attr):
+    '''
+    When `project` contains an unknown attribute, abort
+    '''
+    create_project()
+    project = project1.copy()
+    project[unknown_attr] = 'value'
+    write_project(project)
+    with assert_process_fails(stderr_contains=unknown_attr):
         mkproject()
     
 # def test_idempotent(tmpdir):

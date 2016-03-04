@@ -50,6 +50,8 @@ def get_project():
         On validation errors
     '''
     project_root = Path.cwd()
+    required_attributes = set('name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split())
+    optional_attributes = set('entry_points'.split())
     
     # Load project info
     try:
@@ -59,8 +61,8 @@ def get_project():
     except KeyError:
         raise UserException('project.py must export a `project` variable (with a dict)')
     
-    # Attributes that must be present
-    for attr in 'name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split():
+    # Attributes that must be present    
+    for attr in required_attributes:
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
     
@@ -81,6 +83,9 @@ def get_project():
         raise UserException('Encountered `extras_require` in `project`. Not currently supported, remove it.')
     elif 'install_requires' in project:
         raise UserException('Encountered `install_requires` in `project`. Specify these in requirements.in instead.')
+    else:
+        for unknown_attr in set(project.keys()) - required_attributes - optional_attributes:
+            raise UserException('Encountered unknown attribute `{}` in `project`. Please remove it.'.format(unknown_attr)) 
     
     #TODO ensure the readme_file is mentioned in MANIFEST.in
     
