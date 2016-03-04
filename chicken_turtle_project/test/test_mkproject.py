@@ -1,15 +1,12 @@
 from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager
+import itertools
 import pytest
-import os
 import pprint
+import os
+import re
  
 '''
-error = UserException usually
-    
-'\s*' and None are invalid attr values, however index_test allows None, other should error
-When whitespace or dashes in project[name], error 
-
 The following files are created if missing:
 - project.py
 - $project_name package (=dir and __init__.py)
@@ -47,6 +44,8 @@ The following files will be created or overwritten if they exist:
     author, author_email, description, entry_points keywords license name, url: exact same as input
     version: must match what the version tests expect (e.g. tagged version vs other tag vs no tag)
     no other attribs may be present
+    
+    a few sanity checks with: python setup.py
 
 ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
 
@@ -77,7 +76,9 @@ pre-commit:
 - when any project related file changes during pre-commit, it should be part of the commit. Any other unstaged changes should remain unstaged however!
 - invalid project cancels the commit
 
-When source file lacks copyright header or header is incorrect, error (and point to all wrong files) 
+When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
+
+TODO ensure the readme_file is mentioned in MANIFEST.in 
 '''
 
 from pathlib import Path
@@ -157,7 +158,7 @@ def tmpcwd(request, tmpdir):
     request.addfinalizer(lambda: os.chdir(str(original_cwd)))
     return tmpdir
 
-## util ###########################################
+## setup util ###########################################
 
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
     '''
@@ -186,6 +187,8 @@ def write_project(project):
 def write_file(path, contents):
     with Path(path).open('w') as f:
         f.write(contents)
+
+## assertion util ##############################
 
 @contextmanager
 def assert_file_access(*files, read=None, written=None, stat_changed=None):
@@ -223,16 +226,16 @@ def assert_file_access(*files, read=None, written=None, stat_changed=None):
             assert old.st_ctime_ns == new.st_ctime_ns
 
 @contextmanager
-def assert_process_fails(stderr_contains):
+def assert_process_fails(stderr_matches):
     '''
-    Assert process exits with failure and its stderr contains `stderr_contains`
+    Assert process exits with failure
+    
+    stderr_matches : str
+        Assert stderr matches regex pattern 
     '''
     with pytest.raises(pb.ProcessExecutionError) as ex:
         yield
-    assert stderr_contains in ex.value.stderr
-    
-def is_valid_project():
-    pass
+    assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
 
 ## tests ###########################################
 
@@ -266,7 +269,7 @@ def test_project_undefined(tmpcwd):
     '''
     create_project()
     write_file('project.py', '')
-    with assert_process_fails(stderr_contains='must export a `project` variable'):
+    with assert_process_fails(stderr_matches='must export a `project` variable'):
         mkproject()
         
 @pytest.mark.parametrize('required_attr', project1.keys())
@@ -278,7 +281,7 @@ def test_project_missing_required_attr(tmpcwd, required_attr):
     project = project1.copy()
     del project[required_attr]
     write_project(project)
-    with assert_process_fails(stderr_contains='Missing required attribute: project["{}"]'.format(required_attr)):
+    with assert_process_fails(stderr_matches='Missing.+{}'.format(required_attr)):
         mkproject()
         
 @pytest.mark.parametrize('unknown_attr', 'version package_data packages long_description extras_require install_requires unknown'.split())
@@ -290,7 +293,25 @@ def test_project_has_unknown_attr(tmpcwd, unknown_attr):
     project = project1.copy()
     project[unknown_attr] = 'value'
     write_project(project)
-    with assert_process_fails(stderr_contains=unknown_attr):
+    with assert_process_fails(stderr_matches=unknown_attr):
+        mkproject()
+        
+_parameters = set(itertools.product(project1.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
+_parameters.add(('name', 'white space'))
+_parameters.add(('name', 'dashed-name'))
+
+@pytest.mark.parametrize('attr,value', _parameters)
+def test_project_attr_has_invalid_value(tmpcwd, attr, value):
+    '''
+    When '\s*' or None as attr values, abort
+    
+    When dashes or whitespace in name, abort
+    '''
+    create_project()
+    project = project1.copy()
+    project[attr] = value
+    write_project(project)
+    with assert_process_fails(stderr_matches=attr):
         mkproject()
     
 # def test_idempotent(tmpdir):

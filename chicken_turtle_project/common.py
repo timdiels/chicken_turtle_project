@@ -22,6 +22,7 @@ from versio.version_scheme import Pep440VersionScheme
 from functools import partial
 import git
 import sys
+import re
 
 import logging
 logger = logging.getLogger(__name__)
@@ -85,9 +86,20 @@ def get_project():
         raise UserException('Encountered `install_requires` in `project`. Specify these in requirements.in instead.')
     else:
         for unknown_attr in set(project.keys()) - required_attributes - optional_attributes:
-            raise UserException('Encountered unknown attribute `{}` in `project`. Please remove it.'.format(unknown_attr)) 
-    
-    #TODO ensure the readme_file is mentioned in MANIFEST.in
+            raise UserException('Encountered unknown attribute `{}` in `project`. Please remove it.'.format(unknown_attr))
+        
+    # Ensure values are non-empty
+    for attr in project:
+        if not project[attr]:
+            raise UserException('Attribute `{}` may not be None'.format(attr))
+        if attr != 'entry_points':
+            project[attr] = project[attr].strip()
+            if not project[attr]:
+                raise UserException('Attribute `{}` may not be None, empty or whitespace'.format(attr))
+        
+    # Ensure project name validity
+    if re.search('[\s-]', project['name']):
+        raise UserException('Attribute `name` may not contain whitespace or dashes (use underscores)') 
     
     return project
     

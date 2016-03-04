@@ -20,7 +20,6 @@ from chicken_turtle_project.common import graceful_main, get_repo, get_newest_ve
 from pathlib import Path
 import plumbum as pb
 import logging
-import click
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +49,8 @@ def _main():
     
     assert False
     # Release to test index (if any)
-    index_name = project['index_test']
-    if index_name:
-        _release(index_name)
+    if 'index_test' in project:
+        _release(project['index_test'])
     
     # Release to production index
     _release(project['index_production'])

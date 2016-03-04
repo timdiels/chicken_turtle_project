@@ -49,7 +49,7 @@ project = dict(
     index_production='pypi',
      
     # What does your project relate to?
-    keywords='',
+    keywords='development release setuptools tools',
     
     # Auto generate entry points
     entry_points={

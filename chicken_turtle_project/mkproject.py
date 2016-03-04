@@ -186,6 +186,7 @@ def _make_project(project_root):
         pre_commit_hook_path.chmod(0o775)
     
     # TODO check that source files have correct copyright header
+    # TODO ensure the readme_file is mentioned in MANIFEST.in
     
     return project
 
