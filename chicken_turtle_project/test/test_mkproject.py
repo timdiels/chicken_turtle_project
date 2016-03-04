@@ -1,10 +1,10 @@
 from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager
+import pytest
+import os
  
 '''
 error = UserException usually
-
-When project.py does not define `project`, error
 
 When `project` lacks a required attribute, error
     'name readme_file description author author_email url classifiers keywords download_url index_test index_production'
@@ -156,7 +156,22 @@ project1.update(
     },
 )
 
+@pytest.fixture(scope='function')
+def tmpcwd(request, tmpdir):
+    '''
+    Create temp dir make it the current working directory
+    '''
+    original_cwd = Path.cwd()
+    os.chdir(str(tmpdir))
+    request.addfinalizer(lambda: os.chdir(str(original_cwd)))
+    return tmpdir
+
+## util ###########################################
+
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
+    if has_project_py:
+        write_file('project.py', 'project = {!r}'.format(project1))
+    
     if has_git:
         git_('init')
     
@@ -167,17 +182,17 @@ def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has
         Path(project1['readme_file']).touch()
     
 def write_file(path, contents):
-    with path.open('w') as f:
+    with Path(path).open('w') as f:
         f.write(contents)
 
 @contextmanager
-def ensure_file_access(*files, read=None, written=None, stat_changed=None):
+def assert_file_access(*files, read=None, written=None, stat_changed=None):
     '''
-    Ensure particular file access
+    Assert particular file access does (not) occur
     
     Parameters
     ----------
-    files : iterable of str
+    files : iterable of str or Path
     read : bool
         If True, file must have been read (atime, contents or meta read), if False it musn't have been read, else either is fine. 
     written : bool
@@ -205,30 +220,49 @@ def ensure_file_access(*files, read=None, written=None, stat_changed=None):
         elif stat_changed == False:
             assert old.st_ctime_ns == new.st_ctime_ns
 
+@contextmanager
+def assert_process_fails(stderr_contains):
+    '''
+    Assert process exits with failure and its stderr contains `stderr_contains`
+    '''
+    with pytest.raises(pb.ProcessExecutionError) as ex:
+        yield
+    assert stderr_contains in ex.value.stderr
+    
 def is_valid_project():
     pass
 
-def test_project_missing(tmpdir):
+## tests ###########################################
+
+def test_project_missing(tmpcwd):
     '''
     When project.py missing, ask for a name and generate template
     '''
-    with pb.local.cwd(tmpdir):
-        # When project.py is missing and git repo exists but has no commits
-        create_project(has_project_py=False)
-        (mkproject << project_defaults['name'] + '\n')()
+    # When project.py is missing and git repo exists but has no commits
+    create_project(has_project_py=False)
+    (mkproject << project_defaults['name'] + '\n')()
+    
+    # Then project.py is created and contains the defaults we want
+    project_py_path = Path('project.py')
+    assert project_py_path.exists()
+    project = eval_file(project_py_path)['project']
+    assert project == project_defaults
         
-        # Then project.py is created and contains the defaults we want
-        project_py_path = Path('project.py')
-        assert project_py_path.exists()
-        project = eval_file(project_py_path)['project']
-        assert project == project_defaults
-        
-def test_project_present(tmpdir):
+def test_project_present(tmpcwd):
     '''
     When project.py exists, it is left alone
     '''
     create_project()
-    with ensure_file_access('project.py', written=False):
+    with assert_file_access('project.py', written=False):
+        mkproject()
+        
+def test_project_undefined(tmpcwd):
+    '''
+    When project.py does not define `project`, raise error
+    '''
+    create_project()
+    write_file('project.py', '')
+    with assert_process_fails(stderr_contains='must export a `project` variable'):
         mkproject()
     
 # def test_idempotent(tmpdir):
