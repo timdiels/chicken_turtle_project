@@ -164,6 +164,14 @@ def tmpcwd(request, tmpdir):
 ## util ###########################################
 
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
+    '''
+    Create project
+    
+    Parameters
+    ----------
+    has_project_py : bool
+        If True, create project.py with project1
+    '''
     if has_project_py:
         write_project(project1)
     
@@ -248,7 +256,9 @@ def test_project_missing(tmpcwd):
         
 def test_project_present(tmpcwd):
     '''
-    When project.py exists, it is left alone
+    When project.py exists, it is left alone.
+    
+    When project lacks optional attributes, succeed.
     '''
     create_project()
     with assert_file_access('project.py', written=False):
