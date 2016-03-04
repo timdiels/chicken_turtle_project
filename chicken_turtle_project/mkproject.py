@@ -79,7 +79,7 @@ def _make_project(project_root):
         project_name = click.prompt('Please pick a name for your project')
         assert project_name and project_name.strip()
         with project_path.open('w') as f:
-            f.write(project_template.format(project_name))
+            f.write(project_template.format(name=project_name))
     
     # Load project info
     project = get_project()
@@ -289,7 +289,7 @@ setup(
         
 project_template = """
 project = dict(
-    name='{}',
+    name='{name}',
     description='Short description',
     author='your name',
     author_email='your_email@example.com',
@@ -346,7 +346,7 @@ project = dict(
     # Auto generate entry points
     entry_points={{
         'console_scripts': [
-            'mycli = project_name.main:main', # just an example, any module will do, this template doesn't care where you put it
+            'mycli = {name}.main:main', # just an example, any module will do, this template doesn't care where you put it
         ],
     }},
 )

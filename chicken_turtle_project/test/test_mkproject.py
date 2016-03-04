@@ -1,9 +1,8 @@
 from chicken_turtle_project.common import eval_file
+from contextlib import contextmanager
  
 '''
 error = UserException usually
-
-When project.py exists, it is left alone
 
 When project.py does not define `project`, error
 
@@ -139,13 +138,22 @@ project_defaults = dict(
     ''',
     entry_points={
         'console_scripts': [
-            'mycli = project_name.main:main',
+            'mycli = operation_mittens.main:main',
         ],
     },
 )
 
-project1 = dict(
-    readme_file='README.md'
+project1 = project_defaults.copy()
+project1.update(
+    author='mittens',
+    author_email='mittens@test.com',
+    url='https://test.com/project/home',
+    download_url='https://test.com/repo/{version}',
+    entry_points={
+        'console_scripts': [
+            'meow = operation_mittens.main:main',
+        ],
+    },
 )
 
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
@@ -162,8 +170,40 @@ def write_file(path, contents):
     with path.open('w') as f:
         f.write(contents)
 
-def was_modified(project_py=False):
-    pass
+@contextmanager
+def ensure_file_access(*files, read=None, written=None, stat_changed=None):
+    '''
+    Ensure particular file access
+    
+    Parameters
+    ----------
+    files : iterable of str
+    read : bool
+        If True, file must have been read (atime, contents or meta read), if False it musn't have been read, else either is fine. 
+    written : bool
+        If True, file must have been written (mtime, contents changed) to, if False, it musn't have been written to, else either is fine.
+    stat_changed : bool
+        If True, file must have been changed (ctime, meta info changed, e.g. chmod), if False it musn't have been changed, else either is fine. 
+    '''
+    assert files
+    stats = [Path(file).stat() for file in files]
+    yield
+    new_stats = [Path(file).stat() for file in files]
+    for old, new in zip(stats, new_stats):
+        if read:
+            assert old.st_atime_ns != new.st_atime_ns
+        elif read == False:
+            assert old.st_atime_ns == new.st_atime_ns
+            
+        if written:
+            assert old.st_mtime_ns != new.st_mtime_ns
+        elif written == False:
+            assert old.st_mtime_ns == new.st_mtime_ns
+            
+        if stat_changed:
+            assert old.st_ctime_ns != new.st_ctime_ns
+        elif stat_changed == False:
+            assert old.st_ctime_ns == new.st_ctime_ns
 
 def is_valid_project():
     pass
@@ -182,6 +222,14 @@ def test_project_missing(tmpdir):
         assert project_py_path.exists()
         project = eval_file(project_py_path)['project']
         assert project == project_defaults
+        
+def test_project_present(tmpdir):
+    '''
+    When project.py exists, it is left alone
+    '''
+    create_project()
+    with ensure_file_access('project.py', written=False):
+        mkproject()
     
 # def test_idempotent(tmpdir):
 #     '''

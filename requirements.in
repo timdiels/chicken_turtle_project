@@ -5,3 +5,4 @@ pytest
 pypandoc
 GitPython
 versio
+pip-tools
