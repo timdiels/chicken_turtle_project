@@ -2,12 +2,10 @@ from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager
 import pytest
 import os
+import pprint
  
 '''
 error = UserException usually
-
-When `project` lacks a required attribute, error
-    'name readme_file description author author_email url classifiers keywords download_url index_test index_production'
     
 '\s*' and None are invalid attr values, however index_test allows None, should error
 
@@ -143,17 +141,14 @@ project_defaults = dict(
     },
 )
 
+# non-default minimal project description
 project1 = project_defaults.copy()
+del project1['entry_points']
 project1.update(
     author='mittens',
     author_email='mittens@test.com',
     url='https://test.com/project/home',
     download_url='https://test.com/repo/{version}',
-    entry_points={
-        'console_scripts': [
-            'meow = operation_mittens.main:main',
-        ],
-    },
 )
 
 @pytest.fixture(scope='function')
@@ -170,7 +165,7 @@ def tmpcwd(request, tmpdir):
 
 def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has_requirements_in=True, has_deploy_local=True, has_git=True, has_license=True, has_readme=True):
     if has_project_py:
-        write_file('project.py', 'project = {!r}'.format(project1))
+        write_project(project1)
     
     if has_git:
         git_('init')
@@ -180,6 +175,9 @@ def create_project(has_project_py=True, has_src_pkg=True, has_test_pkg=True, has
             
     if has_readme:
         Path(project1['readme_file']).touch()
+
+def write_project(project):
+    write_file('project.py', 'project = ' + pprint.pformat(project))
     
 def write_file(path, contents):
     with Path(path).open('w') as f:
@@ -254,15 +252,27 @@ def test_project_present(tmpcwd):
     '''
     create_project()
     with assert_file_access('project.py', written=False):
-        mkproject()
+        mkproject & pb.FG
         
 def test_project_undefined(tmpcwd):
     '''
-    When project.py does not define `project`, raise error
+    When project.py does not define `project`, abort
     '''
     create_project()
     write_file('project.py', '')
     with assert_process_fails(stderr_contains='must export a `project` variable'):
+        mkproject()
+        
+@pytest.mark.parametrize('project_required_attr', project1.keys())
+def test_project_missing_required_attr(tmpcwd, project_required_attr):
+    '''
+    When `project` lacks a required attribute, abort
+    '''
+    create_project()
+    project = project1.copy()
+    del project[project_required_attr]
+    write_project(project)
+    with assert_process_fails(stderr_contains='Missing required attribute: project["{}"]'.format(project_required_attr)):
         mkproject()
     
 # def test_idempotent(tmpdir):

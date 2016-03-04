@@ -66,6 +66,7 @@ def get_project():
     
     #
     name = project['name']
+    pkg_root = name
 
     # Attributes that should not be present
     if 'version' in project:
