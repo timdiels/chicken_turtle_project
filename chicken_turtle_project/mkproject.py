@@ -28,6 +28,7 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     - project.py
     - $project_name package
     - $project_name/test package
+    - $project_name/test/conftest.py
     - requirements.in
     - deploy_local
     
@@ -129,6 +130,13 @@ def _make_project(project_root):
         logger.info('Creating {}'.format(test_root_init))
         test_root_init.touch()
         
+    # Create test/conftest.py if missing
+    conftest_py_path = test_root / 'conftest.py'
+    if not conftest_py_path.exists():
+        logger.info('Creating test/conftest.py')
+        with conftest_py_path.open('w') as f:
+            f.write(conftest_py_template)
+        
     # Create requirements.in if missing
     requirements_in_path = project_root / 'requirements.in'
     if not requirements_in_path.exists():
@@ -176,7 +184,7 @@ def _make_project(project_root):
             if not click.confirm('Do you want to continue anyway?'):
                 raise UserException('Cancelled')
             
-    # Install pre-commit hook if none exists
+    # Install pre-commit hook if missing
     # TODO test if setup.py changes during pre-commit, do those changes get included automatically? In our case they should
     pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
     if not pre_commit_hook_path.exists():
@@ -393,4 +401,10 @@ set -e
 ct-mkproject
 ct-mkvenv -e
 venv/bin/py.test
+'''
+
+conftest_py_template = '''
+# http://stackoverflow.com/a/30091579/1031434
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
 '''

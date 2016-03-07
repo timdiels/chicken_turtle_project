@@ -67,6 +67,7 @@ project_defaults = dict(
 file_permissions = {
     Path('operation_mittens/__init__.py') : 'update',
     Path('operation_mittens/test/__init__.py') : 'create',
+    Path('operation_mittens/test/conftest.py') : 'create',
     Path('requirements.in') : 'create',
     Path('deploy_local') : 'create',
     Path('.gitignore') : 'update',
@@ -116,6 +117,10 @@ description-file = bork
 
 [other]
 mittens_says = meow
+'''
+
+conftest_py1 = '''
+# ours
 '''
 
 @pytest.fixture(scope='function')
@@ -188,6 +193,7 @@ def create_project():
     path /= 'test'
     path.mkdir()
     write_file(path / '__init__.py', test_init1)
+    write_file(path / 'conftest.py', conftest_py1)
     write_file('requirements.in', requirements_in1)
     write_file('deploy_local', deploy_local1)
     write_file('.gitignore', gitignore1)
@@ -197,7 +203,7 @@ def create_project():
     write_file('README.md', readme1)
     git_('init')
     
-files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py requirements.in deploy_local .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
+files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in deploy_local .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
 '''files created by create_project'''
 
 def write_project(project):
