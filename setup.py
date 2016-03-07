@@ -52,7 +52,8 @@ setup(
                         '# testing\n'
                         'pytest\n'
                         'pytest-xdist\n'
-                        'pytest-env',
+                        'pytest-env\n'
+                        'pytest-cov',
     'keywords': 'development release setuptools tools',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'

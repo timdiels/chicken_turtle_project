@@ -17,6 +17,7 @@
 
 from signal import signal, SIGPIPE, SIG_DFL
 from pathlib import Path
+from contextlib import contextmanager
 from chicken_turtle_util.exceptions import UserException, log_exception
 from versio.version import Version
 from versio.version_scheme import Pep440VersionScheme
@@ -108,16 +109,18 @@ def get_project():
     
     return project
     
-def graceful_main(main, logger, debug=False):
-    signal(SIGPIPE, SIG_DFL)  # Ignore SIGPIPE, http://stackoverflow.com/a/30091579/1031434
-    
+def init_logging(debug=False):
     if debug:
         level = logging.DEBUG
     else:
         level = logging.INFO
     logging.basicConfig(level=level)
+    
+@contextmanager
+def graceful_main(logger):
+    signal(SIGPIPE, SIG_DFL)  # Ignore SIGPIPE, http://stackoverflow.com/a/30091579/1031434
     try:
-        main()
+        yield
     except UserException as ex:
         logger.error(ex.message)
         sys.exit(1)

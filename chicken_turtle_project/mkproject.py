@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag
+from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag, init_logging
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -64,12 +64,11 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     bumped by 1 (E.g. '1.0.0.dev1' becomes '1.0.0.dev2' and
     '1.0.0' becomes '1.0.1.dev1').
     '''
-    graceful_main(_main, logger)
-    
-def _main():
-    project_root = Path.cwd()
-    project = _make_project(project_root)
-    _make_setup(project, project_root)
+    init_logging()
+    with graceful_main(logger):
+        project_root = Path.cwd()
+        project = _make_project(project_root)
+        _make_setup(project, project_root)
     
 def _make_project(project_root):
     # Create project if missing

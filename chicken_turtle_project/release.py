@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from chicken_turtle_project.common import graceful_main, get_repo, get_newest_version, get_current_version, get_project
+from chicken_turtle_project.common import graceful_main, get_repo, get_newest_version, get_current_version, get_project, init_logging
 from pathlib import Path
 import plumbum as pb
 import logging
@@ -30,7 +30,9 @@ def main():
     Should be run in the project root. Runs venv/bin/python and 'sources'
     `interpreter.py` if it exists.
     '''
-    graceful_main(_main, logger)
+    init_logging()
+    with graceful_main(logger):
+        _main()
     
 def _main():
     # Note: The pre-commit hook already does most of the project validation

@@ -14,7 +14,7 @@
 # 
 # You should have received a copy of the GNU Lesser General Public License
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
-
+from chicken_turtle_project.common import init_logging
 import plumbum as pb
 from pathlib import Path
 
@@ -25,8 +25,10 @@ def main():
     Should be run in the project root. Runs venv/bin/python and 'sources'
     `interpreter.py` if it exists.
     '''
-    python = pb.local['venv/bin/python']
-    if Path('interpreter.py').exists():
-        python('-i', 'interpreter.py')
-    else:
-        python()
+    init_logging()
+    with graceful_main(logger):
+        python = pb.local['venv/bin/python']
+        if Path('interpreter.py').exists():
+            python('-i', 'interpreter.py')
+        else:
+            python()

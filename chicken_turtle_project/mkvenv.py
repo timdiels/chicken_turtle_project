@@ -1,4 +1,4 @@
-from chicken_turtle_project.common import graceful_main
+from chicken_turtle_project.common import graceful_main, init_logging
 from pathlib import Path
 import logging
 import plumbum as pb
@@ -9,7 +9,9 @@ def main():
     '''
     Create Python virtual environment in $project_root/venv and install project in the venv
     '''
-    graceful_main(_main, logger)
+    init_logging()
+    with graceful_main(logger):
+        _main()
     
 def _main():
     # Find the desired Python
