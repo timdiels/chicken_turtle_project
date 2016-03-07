@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag, init_logging
+from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag, init_logging, Version
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -58,12 +58,6 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     All dependencies should be listed in a requirements.in. If you want to
     install dependencies as editable, prefix them with -e and provide a path to
     the package.
-    
-    ct-mkproject will update the current version in
-    $project_name/__init__.py:__version__. This is either the version specified
-    by you using `git tag` or the max version in `git tags` with its dev version
-    bumped by 1 (E.g. '1.0.0.dev1' becomes '1.0.0.dev2' and
-    '1.0.0' becomes '1.0.1.dev1').
     '''
     init_logging()
     with graceful_main(logger):
@@ -101,8 +95,7 @@ def _make_project(project_root):
     repo = get_repo(project_root)
     version = get_current_version(repo)
     if not version:
-        version = get_newest_version(repo)
-        version.bump('dev')
+        version = Version('0.0.0')
     project['version'] = str(version) #TODO no bump if tag is of last commit
     
     # Set __version__ in package root __init__.py    
@@ -168,11 +161,11 @@ def _make_project(project_root):
             raise UserException("Missing file: {}".format(file))
         
     # If version tag, warn if it is less than that of an ancestor commit 
-    version = get_current_version(repo)
+    version = get_current_version(repo) #TODO
     if version:
         ancestors = list(repo.commit().iter_parents())
         versions = []
-        for tag in repo.tags: #TODO test whether this picks up the tag as I'm not sure whether it's checking the tag uncommitted
+        for tag in repo.tags:
             if tag.commit in ancestors:
                 try:
                     versions.append(version_from_tag(tag))

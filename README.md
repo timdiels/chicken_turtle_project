@@ -63,8 +63,10 @@ require the version with the changes you made)
 
 Versions should adhere to [PEP-0440](https://www.python.org/dev/peps/pep-0440/)
 and use [semantic versioning](https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred).
-A commit can be versioned by specifying the version as a tag: e.g. `git tag
-v1.0.0-dev1`.
+Versions are only set on release, via an argument to `ct-release`. `ct-release`
+then adjusts `setup.py` with the new version, commits and tags the commit with
+its version (prefixed with 'v'). At all other times, the version in `setup.py`
+is set to `0.0.0`, use commit ids instead of versions in this case.
 
 ## Old notes (TODO rm)
 - venv_create.sh: create a virtual environment corresponding to setup.py. If

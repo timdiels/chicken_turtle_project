@@ -217,6 +217,13 @@ def write_project(project):
 
 ## assertion util ##############################
 
+def get_setup_args():
+    with Path('setup.py').open('r') as f:
+        content = f.read()
+        content = content[content.find('{') : content.rfind('}')+1]
+        print(content)
+        return eval_string('args=' + content)['args']
+
 @contextmanager
 def assert_file_access(*files, read=None, written=None, stat_changed=None, contents_changed=None):
     '''
@@ -480,18 +487,12 @@ setup(name='pkg4')
 
 def test_setup_py(tmpcwd):
     '''
-    install_requires:
-        requirements.in with version things
-        requirements.in with -e
-        -> should all be thrown in as valid setup.py stuff with version spec maintained
-        
-    long_description present and nonempty
-    classifiers: list of str
-    packages: list of str of packages
-    package_data: dict of package -> list of str of data file paths
-    author, author_email, description, entry_points keywords license name, url: exact same as input
-    
-    a few sanity checks with: python setup.py
+    - install_requires: requirements.in transformed into valid dependency list with version specs maintained
+    - long_description present and nonempty
+    - classifiers: list of str
+    - packages: list of str of packages
+    - package_data: dict of package -> list of str of data file paths
+    - author, author_email, description, entry_points keywords license name, url: exact same as input
     '''
     create_project()
     project = project1.copy()
@@ -521,11 +522,7 @@ def test_setup_py(tmpcwd):
     mkproject()
     
     # Assert all the things
-    with Path('setup.py').open('r') as f:
-        content = f.read()
-        content = content[content.find('{') : content.rfind('}')+1]
-        print(content)
-        setup_args = eval_string('args=' + content)['args']
+    setup_args = get_setup_args()
     
     for attr in ('name', 'author', 'author_email', 'description', 'keywords', 'license', 'url'):
         assert setup_args[attr] == project[attr].strip()
@@ -539,25 +536,11 @@ def test_setup_py(tmpcwd):
         'operation_mittens.test.pkg' : ['operation_mittens/test/pkg/data/file'],
     }
     assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
-    
-# def test_setup_py_versioning(tmpcwd):
-#     '''
-#     download_url: is present iff was tagged version, must be url.
-#     version: must match what the version tests expect (e.g. tagged version vs other tag vs no tag)
-#     no other attribs may be present
-#     '''
-    
+    assert setup_args['version'] == '0.0.0'
+    assert 'download_url' not in setup_args
+            
 '''
-Versions:
-- if tagged version, use that one
-- else max of git tags with dev bump
-- if no tags at all, 0.0.0-dev1
-__version__ in __init__.py must match this version
-
-If tagged version, warn if it is less than that of an ancestor commit:
-- case where it should warn
-- trivial where it shouldn't (e.g. we are the only commit)
-- multi-branch where it shouldn't (it's fine by current branch, but there are newer commits in another branch)
+TODO
 
 pre-commit:
 - it should be created and call ./deploy_local
