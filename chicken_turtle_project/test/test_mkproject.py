@@ -1,6 +1,5 @@
 from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager, ExitStack
-from collections import namedtuple
 from checksumdir import dirhash
 from pathlib import Path
 import plumbum as pb
@@ -404,6 +403,22 @@ def test_missing_files(tmpcwd, missing):
             mkproject()
         assert missing.exists()
     # TODO deploy_local is not created, and just py.test until the rest works
+    
+@pytest.mark.parametrize('name', ('readme.md', 'README.MD', 'REEEADMEE.md'))
+def test_wrong_readme_file_name(tmpcwd, name):
+    '''
+    When files are missing, create them if allowed, error otherwise
+
+    While files are present and may not be updated, they are left untouched
+    '''
+    create_project()
+    project = project1.copy()
+    project['readme_file'] = name
+    write_project(project)
+    Path(name).touch()
+    
+    with assert_process_fails(stderr_matches='readme_file'):
+        mkproject()
         
 # For the next tests we assume that none of the created files are messed with if we have no higher than create permission
 '''

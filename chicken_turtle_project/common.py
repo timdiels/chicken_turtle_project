@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
+from signal import signal, SIGPIPE, SIG_DFL
 from pathlib import Path
 from chicken_turtle_util.exceptions import UserException, log_exception
 from versio.version import Version
@@ -97,13 +98,19 @@ def get_project():
             if not project[attr]:
                 raise UserException('Attribute `{}` may not be None, empty or whitespace'.format(attr))
         
-    # Ensure project name validity
+    # Validate project name
     if re.search('[\s-]', project['name']):
-        raise UserException('Attribute `name` may not contain whitespace or dashes (use underscores)') 
+        raise UserException('Attribute `name` may not contain whitespace or dashes (use underscores)')
+    
+    # Validate readme_file
+    if not re.fullmatch('(.*/)?README.[a-z0-9]+', project['readme_file']):
+        raise UserException('Attribute `readme_file` must be a path with as file name "README.*", case sensitive with a lower case extension')
     
     return project
     
 def graceful_main(main, logger, debug=False):
+    signal(SIGPIPE, SIG_DFL)  # Ignore SIGPIPE, http://stackoverflow.com/a/30091579/1031434
+    
     if debug:
         level = logging.DEBUG
     else:

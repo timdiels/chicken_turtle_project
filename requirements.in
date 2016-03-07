@@ -11,3 +11,4 @@ checksumdir
 pytest
 pytest-xdist
 pytest-env
+pytest-cov
