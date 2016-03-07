@@ -1,9 +1,13 @@
 -e ../chicken_turtle_util
 click
 plumbum
-pytest
 pypandoc
 GitPython
 versio
 pip-tools
 checksumdir
+
+# testing
+pytest
+pytest-xdist
+pytest-env

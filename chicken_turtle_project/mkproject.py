@@ -50,7 +50,7 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     
     Warnings are emitted if these files are missing:
     - LICENSE.txt
-    - README.*
+    - readme file pointed to by readme_file
     
     py.test will be configured to run test in $project_name.test and subpackages
     
@@ -156,7 +156,7 @@ def _make_project(project_root):
             f.write('\n'.join(list(missing_patterns) + [content]))
     
     # Raise error if missing file
-    for file in 'LICENSE.txt README.*'.split():
+    for file in ('LICENSE.txt', project['readme_file']):
         if not glob(file):
             raise UserException("Missing file: {}".format(file))
         
@@ -185,6 +185,13 @@ def _make_project(project_root):
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
     
+    # Create deploy_local if missing
+    deploy_local_path = project_root / 'deploy_local'
+    if not deploy_local_path.exists():
+        logger.info('Creating deploy_local')
+        with deploy_local_path.open('w') as f:
+            f.write(deploy_local_template)
+            
     # TODO check that source files have correct copyright header
     # TODO ensure the readme_file is mentioned in MANIFEST.in
     
@@ -206,7 +213,7 @@ def _update_setup_cfg(project_root, project):
             
     # Update options
     if 'addopts' not in config['pytest']:
-        config['pytest']['addopts'] = '--basetemp=last_test_runs'
+        config['pytest']['addopts'] = '--basetemp=last_test_runs --maxfail=1'
     config['pytest']['testpaths'] = '{}/test'.format(project['name'])
     config['metadata']['description-file'] = project['readme_file']
     
@@ -379,3 +386,12 @@ pre_commit_hook_template = '''
 set -e
 ./deploy_local
 '''.lstrip()
+
+deploy_local_template = '''
+#!/bin/sh
+set -e
+
+ct-mkproject
+ct-mkvenv -e
+venv/bin/py.test
+'''
