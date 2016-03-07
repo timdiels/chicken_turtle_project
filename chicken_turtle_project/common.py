@@ -33,10 +33,13 @@ Version = partial(Version, scheme=Pep440VersionScheme)
 
 def eval_file(path): #TODO move into chicken turtle util
     with path.open() as f:
-        code = compile(f.read(), str(path), 'exec')
-        locals_ = {}
-        exec(code, None, locals_)
-        return locals_
+        return eval_string(f.read(), str(path))
+
+def eval_string(string, name='in_memory_string'):
+    code = compile(string, 'in memory string', 'exec')
+    locals_ = {}
+    exec(code, None, locals_)
+    return locals_
     
 def get_project():
     '''

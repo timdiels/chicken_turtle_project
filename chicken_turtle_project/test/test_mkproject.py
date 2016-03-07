@@ -1,4 +1,4 @@
-from chicken_turtle_project.common import eval_file
+from chicken_turtle_project.common import eval_file, eval_string
 from contextlib import contextmanager, ExitStack
 from checksumdir import dirhash
 from pathlib import Path
@@ -98,6 +98,7 @@ project1.update(
     author_email='mittens@test.com',
     url='https://test.com/project/home',
     download_url='https://test.com/repo/{version}',
+    classifiers='  Development Status :: 2 - Pre-Alpha\nProgramming Language :: Python :: Implementation :: Stackless\n\n'
 )
 
 # file templates
@@ -460,9 +461,25 @@ def test_updates(tmpcwd):
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
         
-# For the next tests we assume that none of the created files are messed with if we have no higher than create permission
+requirements_in_difficult_template = '''
+# line-comment
+pytest  # in-line comment
+pytest-xdist<5.0.0 # version
+# more comment
+pytest-env==0.6
+-e ./pkg_magic
+     
+pytest-cov
+
 '''
-- setup.py:
+
+pkg_magic_setup_py_template = '''
+from setuptools import setup
+setup(name='pkg4')
+'''
+
+def test_setup_py(tmpcwd):
+    '''
     install_requires:
         requirements.in with version things
         requirements.in with -e
@@ -472,20 +489,65 @@ def test_updates(tmpcwd):
     classifiers: list of str
     packages: list of str of packages
     package_data: dict of package -> list of str of data file paths
-        # - pkg[init]/pkg[init]/data/derr/data -> only pick the top data
-        # - pkg[init]/notpkg/data -> don't pick data dir as it's not child of a package
-        # be sure to test for correct pkg names too    
-    download_url: must be present if was tagged version, must be url. May not be present otherwise
     author, author_email, description, entry_points keywords license name, url: exact same as input
-    version: must match what the version tests expect (e.g. tagged version vs other tag vs no tag)
-    no other attribs may be present
     
     a few sanity checks with: python setup.py
-
-py.test will be configured to run test in $project_name.test and subpackages and nowhere else
-
-Must be in a git repo, else error
-
+    '''
+    create_project()
+    project = project1.copy()
+    project['entry_points'] = project_defaults['entry_points']
+    write_project(project)
+    
+    # requirements.in
+    write_file('requirements.in', requirements_in_difficult_template)
+    Path('pkg_magic').mkdir()
+    write_file('pkg_magic/setup.py', pkg_magic_setup_py_template)
+    
+    # Create package_data in operation_mittens/test (it actually may be in non-test as well):
+    Path('operation_mittens/test/data').mkdir()
+    Path('operation_mittens/test/data/subdir').mkdir()
+    Path('operation_mittens/test/data/subdir/file1').touch()
+    Path('operation_mittens/test/data/subdir/file2').touch()
+    Path('operation_mittens/test/not_data').mkdir()
+    Path('operation_mittens/test/not_data/file').touch()
+    Path('operation_mittens/test/not_data/data').mkdir()
+    Path('operation_mittens/test/not_data/data/file').touch()
+    Path('operation_mittens/test/pkg').mkdir()
+    Path('operation_mittens/test/pkg/__init__.py').touch()
+    Path('operation_mittens/test/pkg/data').mkdir()
+    Path('operation_mittens/test/pkg/data/file').touch()
+    
+    # Run
+    mkproject()
+    
+    # Assert all the things
+    with Path('setup.py').open('r') as f:
+        content = f.read()
+        content = content[content.find('{') : content.rfind('}')+1]
+        print(content)
+        setup_args = eval_string('args=' + content)['args']
+    
+    for attr in ('name', 'author', 'author_email', 'description', 'keywords', 'license', 'url'):
+        assert setup_args[attr] == project[attr].strip()
+    assert setup_args['entry_points'] == project['entry_points']
+        
+    assert setup_args['long_description'].strip()
+    assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
+    assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.test', 'operation_mittens.test.pkg']
+    assert setup_args['package_data'] == {
+        'operation_mittens.test' : ['operation_mittens/test/data/subdir/file1', 'operation_mittens/test/data/subdir/file2'],
+        'operation_mittens.test.pkg' : ['operation_mittens/test/pkg/data/file'],
+    }
+    assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
+    
+# def test_setup_py_versioning(tmpcwd):
+#     '''
+#     download_url: is present iff was tagged version, must be url.
+#     version: must match what the version tests expect (e.g. tagged version vs other tag vs no tag)
+#     no other attribs may be present
+#     '''
+    
+'''
 Versions:
 - if tagged version, use that one
 - else max of git tags with dev bump

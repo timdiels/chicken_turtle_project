@@ -242,24 +242,23 @@ def _make_setup(project, project_root):
     # List dependencies
     logger.info('Preparing to write setup.py')
     with (project_root / 'requirements.in').open('r') as f:
-        # TODO test with file with -e and normal and line and inline comments
-        lines = list(map(str.strip, f.readlines()))
-        for i, line in enumerate(lines):
-            if line.startswith('-e'):
-                path = re.match('-e\s+([^#]+)', line).group(1).strip()
-                name = pb.local['python'](Path(path) / 'setup.py', '--name').strip()
-                lines[i] = name
-        project['install_requires'] = '\n'.join(lines) 
+        dependencies = []
+        # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
+        for line in f.readlines():
+            match = re.match('^\s*(-e\s+)?([^#\s-][^#]*)', line)
+            if match:
+                dependency = match.group(2).strip()
+                if match.group(1):
+                    # transform editable dependency into its package name
+                    dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
+                dependencies.append(dependency)
+        project['install_requires'] = dependencies 
     
     # Transform some keys
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
 
     # Packages and package data
-    # TODO test:
-    # - pkg[init]/pkg[init]/data/derr/data -> only pick the top data
-    # - pkg[init]/notpkg/data -> don't pick data dir as it's not child of a package
-    # be sure to test for correct pkg names too
     project['packages'] = find_packages()
     package_data = defaultdict(list) 
     for parent, dirs, files in os.walk(str(pkg_root), topdown=True): #XXX find_packages already found all packages so you could simply use that and check for children named 'data' that aren't in `packages` themselves
