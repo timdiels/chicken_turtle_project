@@ -134,8 +134,11 @@ setup(
                         '`semantic\n'
                         'versioning '
                         '<https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred>`__.\n'
-                        'A commit can be versioned by specifying the version as a tag: e.g.\n'
-                        '``git tag v1.0.0-dev1``.\n'
+                        'Versions are only set on release, via an argument to ``ct-release``.\n'
+                        '``ct-release`` then adjusts ``setup.py`` with the new version, commits\n'
+                        "and tags the commit with its version (prefixed with 'v'). At all other\n"
+                        'times, the version in ``setup.py`` is set to ``0.0.0``, use commit ids\n'
+                        'instead of versions in this case.\n'
                         '\n'
                         'Old notes (TODO rm)\n'
                         '-------------------\n'
@@ -164,5 +167,5 @@ setup(
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '0.0.0.dev1'}
+    'version': '0.0.0'}
 )
