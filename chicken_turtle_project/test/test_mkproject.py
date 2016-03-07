@@ -2,6 +2,7 @@ from chicken_turtle_project.common import eval_file
 from contextlib import contextmanager, ExitStack
 from checksumdir import dirhash
 from pathlib import Path
+from configparser import ConfigParser
 import plumbum as pb
 import itertools
 import pytest
@@ -101,15 +102,15 @@ project1.update(
 
 # file templates
 gitignore1 = 'pattern1\npattern2'
-pkg_init1 = '# init'
-test_init1 = '# init'
+pkg_init1 = '# pkg init'
+test_init1 = '# test init'
 requirements_in1 = 'checksumdir'
 deploy_local1 = '#!/bin/sh\necho "deploy"'
 license_txt1 = 'license'
 readme1 = 'readme'
 setup_cfg1 = '''
 [pytest]
-addopts = --basetemp=last_test_runs --maxfail=1
+addopts = --basetemp=last_test_runs --maxfail=2
 testpaths = bork
 
 [metadata]
@@ -140,6 +141,10 @@ def tmpcwd(request, tmpdir):
 def write_file(path, contents):
     with Path(path).open('w') as f:
         f.write(contents)
+        
+def read_file(path):
+    with Path(path).open('r') as f:
+        return f.read()
         
 import hashlib
 def file_hash(path):
@@ -212,7 +217,7 @@ def write_project(project):
 ## assertion util ##############################
 
 @contextmanager
-def assert_file_access(file, read=None, written=None, stat_changed=None, contents_changed=None):
+def assert_file_access(*files, read=None, written=None, stat_changed=None, contents_changed=None):
     '''
     Assert particular file access does (not) occur
     
@@ -231,7 +236,8 @@ def assert_file_access(file, read=None, written=None, stat_changed=None, content
     contents_changed : bool
         If True, file contents must differ from original, if False, they may not differ, else either is fine.
     '''
-    files = [file]
+    assert files
+    
     stats = [Path(file).stat() for file in files]
     if contents_changed is not None:
         checksums = [file_hash(Path(file)) for file in files]
@@ -425,24 +431,37 @@ def test_wrong_readme_file_name(tmpcwd, name):
     
     with assert_process_fails(stderr_matches='readme_file'):
         mkproject()
+    
+def test_updates(tmpcwd):
+    '''
+    When updating a file but not allowed to overwrite, leave the rest of it intact.
+    
+    - $project_name/__init__.py: leaves all intact, just inserts/overwrites __version__
+    - .gitignore: leaves previous patterns intact, does insert the new patterns
+    - setup.cfg: leaves previous intact, except for some lines designated to be overwritten
+    '''
+    create_project() # Note this template is such that each of the files will require an update
+    updated_files = ('operation_mittens/__init__.py', '.gitignore', 'setup.cfg')
+    with assert_file_access(*updated_files, written=True, contents_changed=True):
+        mkproject()
+    
+    content = read_file('operation_mittens/__init__.py')
+    assert pkg_init1 in content
+    assert '__version__ =' in content
+    
+    content = read_file('.gitignore')
+    assert gitignore1 in content
+    assert '*.egg-info' in content  # check 1 of the patterns is in there, though they should all be in there
+    
+    config = ConfigParser()
+    config.read('setup.cfg')
+    assert config['pytest']['addopts'].strip() == '--basetemp=last_test_runs --maxfail=2'  # unchanged
+    assert config['pytest']['testpaths'] == 'operation_mittens/test'  # overwritten
+    assert config['metadata']['description-file'] == 'README.md'  # overwritten
+    assert config['other']['mittens_says'] == 'meow'  # unchanged
         
 # For the next tests we assume that none of the created files are messed with if we have no higher than create permission
 '''
-When README.* has wrong case, error.
-
-The following files may be created or updated by merging in changes:
-- $project_name/__init__.py: leaves all intact, just inserts/overwrites __version__
-- .gitignore: leaves previous patterns intact, does insert the new patterns
-- setup.cfg: leaves previous intact, except for some lines designated to be overwritten
-    no setup.cfg
-    empty setup.cfg
-    setup.cfg with unrelated section
-    setup.cfg with unrelated and related sections with all the options and some extra options
-    
-    Expect: pytest.addopts create if not exist; pytest.testpaths (projName/test), metadata.description-file (project readme file path) always overwrite
-
-The following files will be created or overwritten if they exist:
-- requirements.txt: check it was created, we trust piptools does it right
 - setup.py:
     install_requires:
         requirements.in with version things
@@ -462,8 +481,6 @@ The following files will be created or overwritten if they exist:
     no other attribs may be present
     
     a few sanity checks with: python setup.py
-
-ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
 
 py.test will be configured to run test in $project_name.test and subpackages and nowhere else
 
