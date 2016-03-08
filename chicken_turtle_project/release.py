@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging, raise_if_repo_dirty
+from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
 from pathlib import Path
@@ -50,15 +50,8 @@ def _main(project_version):
         project = get_project(project_root)
         
         # Working directory must be clean (no untracked/modified files)
-        raise_if_repo_dirty(repo)
-        
-        
-        # Current commit must have version tag
-    #     version = get_current_version(repo)
-    #     if not version:
-    #         raise UserException('Please assign a version with `git tag v{{version}}, newest version is {}`'.format(str(get_newest_version())))
-        
-        
+        if repo.is_dirty(untracked_files=True):
+            raise UserException('Git repo is not clean, please stash or commit all untracked files and changes')
         
         #TODO use:
         # If version tag, warn if it is less than that of an ancestor commit 
@@ -77,31 +70,32 @@ def _main(project_version):
     #             logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
     #             if not click.confirm('Do you want to continue anyway?'):
     #                 raise UserException('Cancelled')
-                
-        # Prepare release
-        logger.info('Preparing to commit versioned project')
-        pb.local['ct-mkproject']['--project-version', project_version] & pb.FG  # Update with version
         
-        logger.info('Committing')
-        git_('commit', '-m', 'Release v{}'.format(project_version))
-        
-        logger.info('Tagging commit as "v{}"'.format(project_version))
-        git_('tag', 'v{}'.format(project_version))
-         
-        # Release to test index (if any)
-        if 'index_test' in project:
-            _release(project['index_test'])
-        
-        # Release to production index
-        _release(project['index_production'])
-        logger.info('Released')
-        
-        # Pushing
-        logger.info('Pushing commits to remote')
-        git_('push')
-        
-        logger.info('Pushing tag to remote')
-        git_('push', 'origin', 'v{}'.format(project_version))
+        with pb.local.env(CT_PROJECT_VERSION=project_version):
+            # Prepare release
+            logger.info('Preparing to commit versioned project')
+            pb.local['ct-mkproject'] & pb.FG  # Update with version
+            
+            logger.info('Committing')
+            git_('commit', '-m', 'Release v{}'.format(project_version))
+            
+            logger.info('Tagging commit as "v{}"'.format(project_version))
+            git_('tag', 'v{}'.format(project_version))
+             
+            # Release to test index (if any)
+            if 'index_test' in project:
+                _release(project['index_test'])
+            
+            # Release to production index
+            _release(project['index_production'])
+            logger.info('Released')
+            
+            # Pushing
+            logger.info('Pushing commits to remote')
+            git_('push')
+            
+            logger.info('Pushing tag to remote')
+            git_('push', 'origin', 'v{}'.format(project_version))
     
 # Note: this function is mocked in a unit test, none of the code
 # that actually releases to an index should leave this function's

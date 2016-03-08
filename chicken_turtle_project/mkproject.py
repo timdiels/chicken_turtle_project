@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, raise_if_repo_dirty
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -33,6 +33,7 @@ def main(args=None):
 @cli.option(
     '--project-version',
     default=_dummy_version,
+    envvar='CT_PROJECT_VERSION',
     help='Internal option, do not use.'
 )
 @click.version_option(version=__version__)
@@ -87,9 +88,9 @@ def _main(pre_commit, project_version):
         project_root = Path.cwd()
         repo = get_repo(project_root)
         
-        if pre_commit:
+        if pre_commit and repo.is_dirty(index=False, working_tree=True, untracked_files=True):
             # Note: previous changes by mkproject will have been staged, so if dirty, it's caused by the user
-            raise_if_repo_dirty(repo)
+            raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash save -k -u "message"`) or add them to .gitignore.')
         
         _ensure_project_exists(project_root)
         
@@ -128,11 +129,7 @@ def _main(pre_commit, project_version):
         _update_requirements_txt()
         _update_setup_py(project, project_root, pkg_root)
         
-        if pre_commit:
-            try:
-                raise_if_repo_dirty(repo)
-            except UserException:
-                assert False  # starting from tidy, we should leave it tidy   
+        assert not pre_commit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'

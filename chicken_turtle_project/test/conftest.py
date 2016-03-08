@@ -7,12 +7,13 @@ import pytest
 signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
 
 #
-@pytest.fixture(scope='function')
-def tmpcwd(request, tmpdir):
+@pytest.yield_fixture(scope='function')
+def tmpcwd(tmpdir):
     '''
     Create temp dir make it the current working directory
     '''
     original_cwd = Path.cwd()
     os.chdir(str(tmpdir))
-    request.addfinalizer(lambda: os.chdir(str(original_cwd)))
-    return tmpdir
+    yield tmpdir
+    os.chdir(str(original_cwd))
+    

@@ -294,6 +294,18 @@ def assert_system_exit(capsys, stderr_matches):
     '''
     with pytest.raises(SystemExit) as ex:
         yield
-    _, err = capsys.readouterr()
-    assert re.search(stderr_matches, err), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
+    _, stderr = capsys.readouterr()
+    assert ex.value.code != 0
+    assert re.search(stderr_matches, stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, stderr)
+    
+@contextmanager
+def suppress_system_exit_0():
+    '''
+    Suppress SystemExit with code 0 (which is success)
+    '''
+    try:
+        yield
+    except SystemExit as ex:
+        if ex.code != 0:
+            raise
     
