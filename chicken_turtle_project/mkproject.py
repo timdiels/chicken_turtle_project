@@ -14,7 +14,9 @@ import re
 
 import logging
 logger = logging.getLogger(__name__)
-    
+
+git_ = pb.local['git']
+
 def main(): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
@@ -41,29 +43,43 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     - requirements.txt
     - setup.py
     
-    A git pre-commit hook will be installed (if none exists) to call
-    $project_root/deploy_local before each commit. deploy_local can be any
-    executable, it is auto generated for you if missing but you is left alone
-    otherwise so you can provide your own. Its purpose is to call `ct-
-    mkproject`, install editably the current project and ensure tests succeed.
-    
-    ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
-    
     Warnings are emitted if these files are missing:
     - LICENSE.txt
     - readme file pointed to by readme_file
     
-    py.test will be configured to run test in $project_name.test and subpackages
+    ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
+    
+    py.test will be configured to run test in $project_name.test and subpackages.
     
     All dependencies should be listed in a requirements.in. If you want to
     install dependencies as editable, prefix them with -e and provide a path to
     the package.
+    
+    A git pre-commit hook will be installed (if none exists) to call
+    $project_root/deploy_local before each commit. deploy_local can be any
+    executable, it is auto generated for you if missing, but is left alone
+    otherwise so you can provide your own. Its purpose is to call `ct-
+    mkproject`, install editably the current project and ensure tests succeed.
+    
+    Any file modified by ct-mkproject, is automatically staged (git).
     '''
     init_logging()
     with graceful_main(logger):
+        is_precommit = 'CT_GIT_HOOK' in pb.local.env  #TODO --pre-commit option instead
         project_root = Path.cwd()
+        
+        if is_precommit:
+            # Raise if repo has unstaged changes or untracked files
+            # Note: previous changes by mkproject will have been staged, so if dirty, it's caused by the user
+            repo = get_repo(project_root)
+            if repo.is_dirty(index=False, working_tree=True, untracked_files=True):
+                raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash -u`) or add them to .gitignore.')
+        
         project = _make_project(project_root)
         _make_setup(project, project_root)
+        
+        assert not is_precommit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)  # starting from tidy, we should leave it tidy 
+            
     
 def _make_project(project_root):
     # Create project if missing
@@ -111,6 +127,7 @@ def _make_project(project_root):
     logger.info('Setting __version__ in {}'.format(pkg_root_init))
     with pkg_root_init.open('w') as f:
         f.write('\n'.join(lines))
+    git_('add', pkg_root_init)
     
     # Create test package if missing
     test_root = pkg_root / 'test'
@@ -122,6 +139,7 @@ def _make_project(project_root):
     if not test_root_init.exists():
         logger.info('Creating {}'.format(test_root_init))
         test_root_init.touch()
+        git_('add', test_root_init)
         
     # Create test/conftest.py if missing
     conftest_py_path = test_root / 'conftest.py'
@@ -129,6 +147,7 @@ def _make_project(project_root):
         logger.info('Creating test/conftest.py')
         with conftest_py_path.open('w') as f:
             f.write(conftest_py_template)
+        git_('add', conftest_py_path)
         
     # Create requirements.in if missing
     requirements_in_path = project_root / 'requirements.in'
@@ -144,6 +163,7 @@ def _make_project(project_root):
     if not gitignore_path.exists():
         logger.info('Creating .gitignore')
         gitignore_path.touch()
+        git_('add', gitignore_path)
     
     # Ensure the right patterns are present in .gitignore
     with gitignore_path.open('r') as f:
@@ -154,12 +174,13 @@ def _make_project(project_root):
         logger.info('Inserting missing patterns into .gitignore')
         with gitignore_path.open('w') as f:
             f.write('\n'.join(list(missing_patterns) + [content]))
+        git_('add', gitignore_path)
     
     # Raise error if missing file
     for file in ('LICENSE.txt', project['readme_file']):
         if not glob(file):
             raise UserException("Missing file: {}".format(file))
-        
+    
     # If version tag, warn if it is less than that of an ancestor commit 
     version = get_current_version(repo) #TODO
     if version:
@@ -191,6 +212,7 @@ def _make_project(project_root):
         logger.info('Creating deploy_local')
         with deploy_local_path.open('w') as f:
             f.write(deploy_local_template)
+        git_('add', deploy_local_path)
             
     # Ensure deploy_local is executable
     stat = deploy_local_path.stat()
@@ -198,6 +220,7 @@ def _make_project(project_root):
     if stat.st_mode != new_mode:
         logger.info('Setting mode u+rx on deploy_local')
         deploy_local_path.chmod(new_mode)
+        git_('add', deploy_local_path)
             
     # TODO check that source files have correct copyright header
     # TODO ensure the readme_file is mentioned in MANIFEST.in
@@ -210,6 +233,7 @@ def _update_setup_cfg(project_root, project):
     if not setup_cfg_path.exists():
         logger.info('Creating setup.cfg')
         setup_cfg_path.touch()
+        git_('add', setup_cfg_path)
     
     # Ensure sections exist
     config = ConfigParser()
@@ -219,15 +243,26 @@ def _update_setup_cfg(project_root, project):
             config.add_section(section_name)
             
     # Update options
+    changed = False
     if 'addopts' not in config['pytest']:
         config['pytest']['addopts'] = '--basetemp=last_test_runs --maxfail=1'
-    config['pytest']['testpaths'] = '{}/test'.format(project['name'])
-    config['metadata']['description-file'] = project['readme_file']
+        changed = True
+    
+    test_paths = '{}/test'.format(project['name'])
+    if 'testpaths' not in config['pytest'] or config['pytest']['testpaths'] != test_paths:
+        config['pytest']['testpaths'] = test_paths
+        changed = True
+        
+    if 'description-file' not in config['metadata'] or config['metadata']['description-file'] != project['readme_file']:
+        config['metadata']['description-file'] = project['readme_file']
+        changed = True
     
     # Write updated
-    logger.info('Writing setup.cfg')
-    with setup_cfg_path.open('w') as f:
-        config.write(f)
+    if changed:
+        logger.info('Writing setup.cfg')
+        with setup_cfg_path.open('w') as f:
+            config.write(f)
+        git_('add', setup_cfg_path)
             
 def _make_setup(project, project_root):
     '''Expects to run after _make_project'''
@@ -238,6 +273,7 @@ def _make_setup(project, project_root):
     # Write requirements.txt
     logger.info('Writing requirements.txt')
     pb.local['pip-compile']('requirements.in')
+    git_('add', 'requirements.txt')
     
     # List dependencies
     logger.info('Preparing to write setup.py')
@@ -288,8 +324,10 @@ def _make_setup(project, project_root):
     del project['index_test']
     del project['index_production']
     logger.info('Writing setup.py')
-    with (project_root / 'setup.py').open('w') as f:
+    setup_py_path = project_root / 'setup.py'
+    with setup_py_path.open('w') as f:
         f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
+    git_('add', setup_py_path)
         
 setup_template = '''
 # Auto generated by ct-mksetup
@@ -376,7 +414,6 @@ gitignore_patterns = r'''
 .project
 .pydevproject
 .cproject
-test/last_runs
 venv
 *.pyc
 __pycache__
@@ -390,23 +427,51 @@ pre_commit_hook_template = '''
 #!/bin/sh
 # Auto generated by ct-mkproject, you may edit this file. When deleted, this file will be recreated.
 set -e
-( # subshell
-    # Remove git env vars
+
+cleanup() {
+    set +e
+    >&2 echo Cleaning
+    rm -rf "$temp_dir"
+}
+
+# Update project
+CT_GIT_HOOK=pre-commit ct-mkproject
+
+# Export last commit + staged changes
+trap cleanup EXIT
+temp_dir=`mktemp -d`
+mkdir "$temp_dir/project"
+
+
+if git rev-parse HEAD &>/dev/null  # Export last commit, if any
+then
+    git archive HEAD | tar -x -C "$temp_dir/project/"
+fi
+
+git diff --cached --binary > $temp_dir/patch  # Make patch of staged changes
+
+pushd "$temp_dir/project"
+(
+    # Forget about git environment in temp dir
     unset `env | cut -d'=' -f1 | grep -e '^GIT'`
     
-    # Check we can deploy locally and tests succeed
+    # Export staged changes
+    git apply ../patch
+    
+    # Run tests
     ./deploy_local
 )
+popd
 '''.lstrip()
 
 deploy_local_template = '''
 #!/bin/sh
 set -e
-
-ct-mkproject
-ct-mkvenv -e
+ct-mkvenv -e   
 venv/bin/py.test
 '''
+# Remove git env vars
+#unset `env | cut -d'=' -f1 | grep -e '^GIT'`
 
 conftest_py_template = '''
 # http://stackoverflow.com/a/30091579/1031434
