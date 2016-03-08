@@ -1,70 +1,24 @@
-from chicken_turtle_project.common import eval_file, eval_string
-from contextlib import contextmanager, ExitStack
-from checksumdir import dirhash
+'''
+ct-mkproject tests
+'''
+
+from chicken_turtle_project.test.common import (
+    create_project, remove_file, mkproject, project_defaults, write_project, write_file, 
+    git_, requirements_in1, license_txt1, readme1, test_one1, project1,
+    assert_directory_contents, assert_process_fails, assert_file_access,
+    read_file, gitignore1, get_setup_args, files_create_project,
+    pkg_init1
+)
+from contextlib import ExitStack
+from chicken_turtle_project.common import eval_file
 from pathlib import Path
 from configparser import ConfigParser
 import plumbum as pb
 import itertools
 import pytest
-import pprint
-import shutil
 import git
-import re
-import os
 
-mkproject = pb.local['ct-mkproject']
-git_ = pb.local['git']
-
-project_defaults = dict(
-    name='operation_mittens',
-    description='Short description',
-    author='your name',
-    author_email='your_email@example.com',
-    readme_file='README.md',
-    url='https://example.com/project/home',
-    download_url='https://example.com/repo/{version}',
-    license='LGPL3',
-    keywords='keyword1 key-word2',
-    index_test = 'pypitest',
-    index_production = 'pypi',
-    classifiers='''
-        Development Status :: 2 - Pre-Alpha
-        Intended Audience :: Developers
-        License :: OSI Approved
-        License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
-        Natural Language :: English
-        Operating System :: POSIX
-        Operating System :: POSIX :: AIX
-        Operating System :: POSIX :: BSD
-        Operating System :: POSIX :: BSD :: BSD/OS
-        Operating System :: POSIX :: BSD :: FreeBSD
-        Operating System :: POSIX :: BSD :: NetBSD
-        Operating System :: POSIX :: BSD :: OpenBSD
-        Operating System :: POSIX :: GNU Hurd
-        Operating System :: POSIX :: HP-UX
-        Operating System :: POSIX :: IRIX
-        Operating System :: POSIX :: Linux
-        Operating System :: POSIX :: Other
-        Operating System :: POSIX :: SCO
-        Operating System :: POSIX :: SunOS/Solaris
-        Operating System :: Unix
-        Programming Language :: Python
-        Programming Language :: Python :: 3
-        Programming Language :: Python :: 3 :: Only
-        Programming Language :: Python :: 3.2
-        Programming Language :: Python :: 3.3
-        Programming Language :: Python :: 3.4
-        Programming Language :: Python :: 3.5
-        Programming Language :: Python :: Implementation
-        Programming Language :: Python :: Implementation :: CPython
-        Programming Language :: Python :: Implementation :: Stackless
-    ''',
-    entry_points={
-        'console_scripts': [
-            'mycli = operation_mittens.main:main',
-        ],
-    },
-)
+## setup, asserts, util #######################################
 
 file_permissions = {
     Path('operation_mittens/__init__.py') : 'update',
@@ -77,7 +31,7 @@ file_permissions = {
     Path('setup.cfg') : 'update',
     Path('setup.py') : 'overwrite',
     Path('LICENSE.txt') : 'none',
-    Path('README.md') : 'none',
+    Path('README.md') : 'none'
 }
 '''
 Maps regular files to their write permission.
@@ -91,131 +45,6 @@ Permissions (each permission level includes all the above, e.g. overwrite may al
 - update
 - overwrite 
 '''
-
-# non-default minimal project description
-project1 = project_defaults.copy()
-del project1['entry_points']
-del project1['index_test']
-project1.update(
-    author='mittens',
-    author_email='mittens@test.com',
-    url='https://test.com/project/home',
-    download_url='https://test.com/repo/{version}',
-    classifiers='  Development Status :: 2 - Pre-Alpha\nProgramming Language :: Python :: Implementation :: Stackless\n\n'
-)
-
-# file templates
-gitignore1 = 'pattern1\npattern2'
-pkg_init1 = '# pkg init'
-test_init1 = '# test init'
-requirements_in1 = 'checksumdir'
-deploy_local1 = '#!/bin/sh\necho "deploy"'
-license_txt1 = 'license'
-readme1 = 'readme'
-setup_cfg1 = '''
-[pytest]
-addopts = --basetemp=last_test_runs --maxfail=2
-testpaths = bork
-
-[metadata]
-description-file = bork
-
-[other]
-mittens_says = meow
-'''
-
-conftest_py1 = '''
-# ours
-'''
-
-@pytest.fixture(scope='function')
-def tmpcwd(request, tmpdir):
-    '''
-    Create temp dir make it the current working directory
-    '''
-    original_cwd = Path.cwd()
-    os.chdir(str(tmpdir))
-    request.addfinalizer(lambda: os.chdir(str(original_cwd)))
-    return tmpdir
-
-## util ######################
-
-# Reusable outside testing too
-
-def write_file(path, contents):
-    with Path(path).open('w') as f:
-        f.write(contents)
-        
-def read_file(path):
-    with Path(path).open('r') as f:
-        return f.read()
-        
-import hashlib
-def file_hash(path):
-    '''
-    Get SHA512 checksum of file
-    
-    Parameters
-    ----------
-    path : pathlib.Path
-    
-    Returns
-    -------
-    hash object
-        hash of file contents
-        
-    See also
-    --------
-    checksumdir.dirhash (TODO or change interface such that it allows directories too, derring to dirhash)
-    '''
-    with path.open('rb') as f:
-        hash_ = hashlib.sha512()
-        while True:
-            buffer = f.read(65536)
-            hash_.update(buffer)
-            if not buffer:
-                return hash_.digest()
-            
-def remove_file(path):
-    '''
-    Remove file or directory (recursively)
-    
-    Parameters
-    ----------
-    path : Path
-    '''
-    if path.is_dir():
-        shutil.rmtree(str(path))
-    else:
-        path.unlink()
-
-## setup util ###########################################
-
-def create_project():
-    '''
-    Create all required, optional and generated files for ct-mkproject based on `project1`, and init git
-    '''
-    write_project(project1)
-    path = Path('operation_mittens')
-    path.mkdir()
-    write_file(path / '__init__.py', pkg_init1)
-    path /= 'test'
-    path.mkdir()
-    write_file(path / '__init__.py', test_init1)
-    write_file(path / 'conftest.py', conftest_py1)
-    write_file('requirements.in', requirements_in1)
-    write_file('deploy_local', deploy_local1)
-    write_file('.gitignore', gitignore1)
-    write_file('LICENSE.txt', license_txt1)
-    write_file('setup.cfg', setup_cfg1)
-    write_file('setup.py', 'bork')
-    write_file('README.md', readme1)
-    git_('init')
-    
-test_template = '''
-def test_one():
-    pass
-'''
     
 def create_precommit_project():
     '''
@@ -227,113 +56,12 @@ def create_precommit_project():
     write_file('README.md', readme1)
     Path('operation_mittens').mkdir()
     Path('operation_mittens/test').mkdir()
-    write_file('operation_mittens/test/test_one.py', test_template)
+    write_file('operation_mittens/test/test_one.py', test_one1)
     git_('init')
     
-files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in deploy_local .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
-'''files created by create_project'''
+    
+## tests ############################################
 
-def write_project(project):
-    write_file('project.py', 'project = ' + pprint.pformat(project))
-
-## assertion util ##############################
-
-def get_setup_args():
-    with Path('setup.py').open('r') as f:
-        content = f.read()
-        content = content[content.find('{') : content.rfind('}')+1]
-        return eval_string('args=' + content)['args']
-
-@contextmanager
-def assert_file_access(*files, read=None, written=None, stat_changed=None, contents_changed=None):
-    '''
-    Assert particular file access does (not) occur
-    
-    `contents_changed` is a more stringent condition than `written` as `written=True` 
-    only requires the file to have been written to, not to have actually changed.
-    
-    Parameters
-    ----------
-    files : iterable of str or Path
-    read : bool
-        If True, file must have been read (atime, contents or meta read), if False it musn't have been read, else either is fine. 
-    written : bool
-        If True, file must have been written (mtime, contents changed) to, if False, it musn't have been written to, else either is fine.
-    stat_changed : bool
-        If True, file must have been changed (ctime, meta info changed, e.g. chmod), if False it musn't have been changed, else either is fine.
-    contents_changed : bool
-        If True, file contents must differ from original, if False, they may not differ, else either is fine.
-    '''
-    assert files
-    
-    stats = [Path(file).stat() for file in files]
-    if contents_changed is not None:
-        checksums = [file_hash(Path(file)) for file in files]
-    assert file_hash(Path('project.py')) == file_hash(Path('project.py')) #TODO rm this double check
-    yield
-    
-    # read, written, stat_changed
-    new_stats = [Path(file).stat() for file in files]
-    for file, old, new in zip(files, stats, new_stats):
-        if read:
-            assert old.st_atime_ns != new.st_atime_ns, file
-        elif read == False:
-            assert old.st_atime_ns == new.st_atime_ns, file
-            
-        if written:
-            assert old.st_mtime_ns != new.st_mtime_ns, file
-        elif written == False:
-            assert old.st_mtime_ns == new.st_mtime_ns, file
-            
-        if stat_changed:
-            assert old.st_ctime_ns != new.st_ctime_ns, file
-        elif stat_changed == False:
-            assert old.st_ctime_ns == new.st_ctime_ns, file
-            
-    # contents_changed
-    if contents_changed is not None:
-        new_checksums = [file_hash(Path(file)) for file in files]
-        for file, old, new in zip(files, checksums, new_checksums):
-            if contents_changed:
-                assert old != new, file
-            else:
-                assert old == new, file
-                
-@contextmanager
-def assert_directory_contents(path, changed=True):
-    '''
-    Assert directory contents change or remain the same.
-    
-    Contents are compared deeply, i.e. recursively and file contents are considered as well.
-    
-    Parameters
-    ----------
-    path : Path
-        Path to directory
-    changed : bool
-        If True, directory contents must change, else contents must remain the same.
-    '''
-    old = dirhash(str(path), 'sha512')
-    yield
-    new = dirhash(str(path), 'sha512')
-    if changed:
-        assert old != new
-    else:
-        assert old == new
-
-@contextmanager
-def assert_process_fails(stderr_matches):
-    '''
-    Assert process exits with failure
-    
-    stderr_matches : str
-        Assert stderr matches regex pattern 
-    '''
-    with pytest.raises(pb.ProcessExecutionError) as ex:
-        yield
-    assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
-
-## tests ###########################################
 
 def test_project_missing(tmpcwd):
     '''
