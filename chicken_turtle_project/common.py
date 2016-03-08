@@ -125,7 +125,7 @@ def get_repo(project_root):
 def raise_if_repo_dirty(repo):
     # Raise if repo has unstaged changes or untracked files
     if repo.is_dirty(index=False, working_tree=True, untracked_files=True):
-        raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash -u`) or add them to .gitignore.')
+        raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash save -k -u "message"`) or add them to .gitignore.')
     
 def version_from_tag(tag):
     '''
