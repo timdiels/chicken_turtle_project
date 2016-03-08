@@ -588,9 +588,7 @@ def test_precommit_include_changes(tmpcwd):
     assert not repo.is_dirty(untracked_files=True)
             
 '''
-TODO  
-
-index_test should be optional
+TODO
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 

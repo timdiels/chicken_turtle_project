@@ -5,37 +5,6 @@ Chicken Turtle provides tools (CLI) for developing Python 3 projects.
 Chicken Turtle is pre-alpha. None of the interface is stable, i.e. it may
 change in the future.
 
-## ct-mkproject
-See `ct-mkproject --help`
-
-## ct-mksetup
-
-Your project should adhere to the following minimal structure (can be created
-with `ct-mkproject`):
-
-    $project_name
-      __init__.py
-      version.py
-    project.py
-
-Your source goes in `$project_name`. Use `project.py` to configure
-`ct-mksetup`. Package data can be added by adding a `data` directory without an
-`__init__.py` to the package in the `$project_name` tree. 
-
-Run `ct-mksetup` to generate/update `setup.py`.
-
-## ct-mkvenv
-
-See `ct-mkvenv --help`
-
-## ct-interpreter
-
-See `ct-interpreter --help`
-
-## Deployment API
-
-There's a single function that helps with very simple deployments.
-
 ## Methodology
 
 Tests must be placed in $project_name.test or subpackages. Tests are run with
