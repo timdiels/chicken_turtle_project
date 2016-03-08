@@ -589,6 +589,8 @@ def test_precommit_include_changes(tmpcwd):
 '''
 TODO  
 
+index_test should be optional
+
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
 Ensure the readme_file is mentioned in MANIFEST.in 

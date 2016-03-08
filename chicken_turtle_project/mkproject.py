@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, eval_file, graceful_main, get_repo, get_current_version, get_newest_version, version_from_tag, init_logging, Version
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -16,6 +16,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 git_ = pb.local['git']
+
+_dummy_version = '0.0.0'
 
 def main(): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
     '''
@@ -75,14 +77,46 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
             if repo.is_dirty(index=False, working_tree=True, untracked_files=True):
                 raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash -u`) or add them to .gitignore.')
         
-        project = _make_project(project_root)
-        _make_setup(project, project_root)
+        _ensure_project_exists(project_root)
+        
+        project = get_project(project_root)
+        pkg_root = project_root / project['name']
+        project['version'] = _dummy_version  #TODO version will be provided by ct-release via --version (not to be used directly by users), defaults to this
+        
+        _ensure_root_package_exists(pkg_root)
+        _update_root_package(pkg_root, project['version'])
+        
+        test_root = pkg_root / 'test'
+        _ensure_test_package_exists(test_root)
+        _ensure_conftest_exists(test_root)
+        
+        _ensure_requirements_in_exists(project_root)
+        
+        setup_cfg_path = project_root / 'setup.cfg'
+        _ensure_setup_cfg_exists(setup_cfg_path)
+        _update_setup_cfg(setup_cfg_path, project)
+        
+        gitignore_path = project_root / '.gitignore'
+        _ensure_gitignore_exists(gitignore_path)
+        _update_gitignore(gitignore_path)
+        
+        _ensure_precommit_hook_exists(project_root)
+        
+        deploy_local_path = project_root / 'deploy_local'
+        _ensure_deploy_local_exists(deploy_local_path)
+        _ensure_deploy_local_is_executable(deploy_local_path)
+        
+        _raise_if_missing_file(project)
+        
+        # TODO check that source files have correct copyright header
+        # TODO ensure the readme_file is mentioned in MANIFEST.in
+        
+        _update_requirements_txt()
+        _update_setup_py(project, project_root, pkg_root)
         
         assert not is_precommit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)  # starting from tidy, we should leave it tidy 
             
-    
-def _make_project(project_root):
-    # Create project if missing
+def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
     if not project_path.exists():
         logger.info('project.py not found, will create from template')
@@ -90,12 +124,8 @@ def _make_project(project_root):
         assert project_name and project_name.strip()
         with project_path.open('w') as f:
             f.write(project_template.format(name=project_name))
-    
-    # Load project info
-    project = get_project()
-    project_name = project['name']
-    pkg_root = project_root / project_name
-    
+
+def _ensure_root_package_exists(pkg_root):
     # Create package dir if missing
     if not pkg_root.exists():
         logger.info('Creating {}'.format(pkg_root))
@@ -106,16 +136,13 @@ def _make_project(project_root):
     if not pkg_root_init.exists():
         logger.info('Creating {}'.format(pkg_root_init))
         pkg_root_init.touch()
-    
-    # Determine current version
-    repo = get_repo(project_root)
-    version = get_current_version(repo)
-    if not version:
-        version = Version('0.0.0')
-    project['version'] = str(version) #TODO no bump if tag is of last commit
-    
-    # Set __version__ in package root __init__.py    
-    version_line = version_template.format(project['version'])
+        
+def _update_root_package(pkg_root, version):
+    '''
+    Set __version__ in package root __init__.py
+    '''
+    pkg_root_init = pkg_root / '__init__.py'
+    version_line = version_template.format(version)
     with pkg_root_init.open('r') as f:
         lines = f.read().splitlines()
     for i, line in enumerate(lines):
@@ -129,8 +156,7 @@ def _make_project(project_root):
         f.write('\n'.join(lines))
     git_('add', pkg_root_init)
     
-    # Create test package if missing
-    test_root = pkg_root / 'test'
+def _ensure_test_package_exists(test_root):
     if not test_root.exists():
         logger.info('Creating {}'.format(test_root))
         test_root.mkdir()
@@ -141,7 +167,7 @@ def _make_project(project_root):
         test_root_init.touch()
         git_('add', test_root_init)
         
-    # Create test/conftest.py if missing
+def _ensure_conftest_exists(test_root):
     conftest_py_path = test_root / 'conftest.py'
     if not conftest_py_path.exists():
         logger.info('Creating test/conftest.py')
@@ -149,92 +175,19 @@ def _make_project(project_root):
             f.write(conftest_py_template)
         git_('add', conftest_py_path)
         
-    # Create requirements.in if missing
+def _ensure_requirements_in_exists(project_root):
     requirements_in_path = project_root / 'requirements.in'
     if not requirements_in_path.exists():
         logger.info('Creating requirements.in')
         requirements_in_path.touch()
         
-    # Create setup.cfg if missing
-    _update_setup_cfg(project_root, project)
-        
-    # Create .gitignore if missing
-    gitignore_path = project_root / '.gitignore'
-    if not gitignore_path.exists():
-        logger.info('Creating .gitignore')
-        gitignore_path.touch()
-        git_('add', gitignore_path)
-    
-    # Ensure the right patterns are present in .gitignore
-    with gitignore_path.open('r') as f:
-        content = f.read()
-    patterns = set(map(str.strip, content.splitlines()))
-    missing_patterns = gitignore_patterns - patterns
-    if missing_patterns:
-        logger.info('Inserting missing patterns into .gitignore')
-        with gitignore_path.open('w') as f:
-            f.write('\n'.join(list(missing_patterns) + [content]))
-        git_('add', gitignore_path)
-    
-    # Raise error if missing file
-    for file in ('LICENSE.txt', project['readme_file']):
-        if not glob(file):
-            raise UserException("Missing file: {}".format(file))
-    
-    # If version tag, warn if it is less than that of an ancestor commit 
-    version = get_current_version(repo) #TODO
-    if version:
-        ancestors = list(repo.commit().iter_parents())
-        versions = []
-        for tag in repo.tags:
-            if tag.commit in ancestors:
-                try:
-                    versions.append(version_from_tag(tag))
-                except AttributeError:
-                    pass
-        newest_ancestor_version = max(versions)
-        if version < newest_ancestor_version:
-            logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
-            if not click.confirm('Do you want to continue anyway?'):
-                raise UserException('Cancelled')
-            
-    # Install pre-commit hook if missing
-    # TODO test if setup.py changes during pre-commit, do those changes get included automatically? In our case they should
-    pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
-    if not pre_commit_hook_path.exists():
-        with pre_commit_hook_path.open('w') as f:
-            f.write(pre_commit_hook_template)
-        pre_commit_hook_path.chmod(0o775)
-    
-    # Create deploy_local if missing
-    deploy_local_path = project_root / 'deploy_local'
-    if not deploy_local_path.exists():
-        logger.info('Creating deploy_local')
-        with deploy_local_path.open('w') as f:
-            f.write(deploy_local_template)
-        git_('add', deploy_local_path)
-            
-    # Ensure deploy_local is executable
-    stat = deploy_local_path.stat()
-    new_mode = stat.st_mode | 0o500
-    if stat.st_mode != new_mode:
-        logger.info('Setting mode u+rx on deploy_local')
-        deploy_local_path.chmod(new_mode)
-        git_('add', deploy_local_path)
-            
-    # TODO check that source files have correct copyright header
-    # TODO ensure the readme_file is mentioned in MANIFEST.in
-    
-    return project
-
-def _update_setup_cfg(project_root, project):
-    # Ensure file exists
-    setup_cfg_path = project_root / 'setup.cfg'
+def _ensure_setup_cfg_exists(setup_cfg_path):
     if not setup_cfg_path.exists():
         logger.info('Creating setup.cfg')
         setup_cfg_path.touch()
         git_('add', setup_cfg_path)
-    
+        
+def _update_setup_cfg(setup_cfg_path, project):
     # Ensure sections exist
     config = ConfigParser()
     config.read(str(setup_cfg_path))
@@ -263,18 +216,83 @@ def _update_setup_cfg(project_root, project):
         with setup_cfg_path.open('w') as f:
             config.write(f)
         git_('add', setup_cfg_path)
-            
-def _make_setup(project, project_root):
-    '''Expects to run after _make_project'''
+        
+def _ensure_gitignore_exists(gitignore_path):
+    if not gitignore_path.exists():
+        logger.info('Creating .gitignore')
+        gitignore_path.touch()
+        git_('add', gitignore_path)
+        
+def _update_gitignore(gitignore_path):
+    '''
+    Ensure the right patterns are present in .gitignore
+    '''
+    with gitignore_path.open('r') as f:
+        content = f.read()
+    patterns = set(map(str.strip, content.splitlines()))
+    missing_patterns = gitignore_patterns - patterns
+    if missing_patterns:
+        logger.info('Inserting missing patterns into .gitignore')
+        with gitignore_path.open('w') as f:
+            f.write('\n'.join(list(missing_patterns) + [content]))
+        git_('add', gitignore_path)
+        
+def _raise_if_missing_file(project):
+    for file in ('LICENSE.txt', project['readme_file']):
+        if not glob(file):
+            raise UserException("Missing file: {}".format(file))
     
-    name = project['name']
-    pkg_root = Path(name)
-    
-    # Write requirements.txt
+def _ensure_precommit_hook_exists(project_root):    
+    pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
+    if not pre_commit_hook_path.exists():
+        with pre_commit_hook_path.open('w') as f:
+            f.write(pre_commit_hook_template)
+        pre_commit_hook_path.chmod(0o775)
+
+def _ensure_deploy_local_exists(deploy_local_path):        
+    if not deploy_local_path.exists():
+        logger.info('Creating deploy_local')
+        with deploy_local_path.open('w') as f:
+            f.write(deploy_local_template)
+        git_('add', deploy_local_path)
+
+def _ensure_deploy_local_is_executable(deploy_local_path):            
+    stat = deploy_local_path.stat()
+    new_mode = stat.st_mode | 0o100
+    if stat.st_mode != new_mode:
+        logger.info('Setting mode u+x on deploy_local')
+        deploy_local_path.chmod(new_mode)
+        git_('add', deploy_local_path)
+        
+def _update_requirements_txt():
     logger.info('Writing requirements.txt')
     pb.local['pip-compile']('requirements.in')
     git_('add', 'requirements.txt')
+
+def _update_setup_py(project, project_root, pkg_root):
+    project['install_requires'] = _get_install_requires(project_root) 
+    project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
+    project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
+    project['packages'] = find_packages()
+    project['package_data'] = _get_package_data(project_root, pkg_root)
     
+    # Add download_url if current commit is version tagged
+    if project['version'] != _dummy_version:
+        project['download_url'] = project['download_url'].format(version=project['version'])
+    else:
+        del project['download_url']
+    
+    # Write setup.py
+    del project['readme_file']
+    del project['index_test']
+    del project['index_production']
+    logger.info('Writing setup.py')
+    setup_py_path = project_root / 'setup.py'
+    with setup_py_path.open('w') as f:
+        f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
+    git_('add', setup_py_path)
+  
+def _get_install_requires(project_root):
     # List dependencies
     logger.info('Preparing to write setup.py')
     with (project_root / 'requirements.in').open('r') as f:
@@ -288,16 +306,13 @@ def _make_setup(project, project_root):
                     # transform editable dependency into its package name
                     dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
                 dependencies.append(dependency)
-        project['install_requires'] = dependencies 
+    return dependencies
     
-    # Transform some keys
-    project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
-    project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
-
-    # Packages and package data
-    project['packages'] = find_packages()
+def _get_package_data(project_root, pkg_root):
+    pkg_root = pkg_root.relative_to(project_root)
     package_data = defaultdict(list) 
     for parent, dirs, files in os.walk(str(pkg_root), topdown=True): #XXX find_packages already found all packages so you could simply use that and check for children named 'data' that aren't in `packages` themselves
+        # Note: `parent` is path str relative to what we're walking
         if '__init__.py' not in files:
             # Don't search in non-package directories
             dirs[:] = []
@@ -309,25 +324,8 @@ def _make_setup(project, project_root):
                 dirs.remove('data') 
                 for parent2, _, files2 in os.walk(str(dir_)):
                     package_data[parent.replace('/', '.')].extend(str(Path(parent2) / file) for file in files2)
-    project['package_data'] = dict(package_data)
-    
-    # Add download_url if current commit is version tagged
-    repo = get_repo(project_root)
-    version = get_current_version(repo)
-    if version:
-        project['download_url'] = project['download_url'].format(version=str(version))
-    else:
-        del project['download_url']
-    
-    # Write setup.py
-    del project['readme_file']
-    del project['index_test']
-    del project['index_production']
-    logger.info('Writing setup.py')
-    setup_py_path = project_root / 'setup.py'
-    with setup_py_path.open('w') as f:
-        f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
-    git_('add', setup_py_path)
+    return dict(package_data)
+        
         
 setup_template = '''
 # Auto generated by ct-mksetup
@@ -450,18 +448,18 @@ fi
 
 git diff --cached --binary > $temp_dir/patch  # Make patch of staged changes
 
-pushd "$temp_dir/project"
+pushd "$temp_dir/project" &> /dev/null
 (
     # Forget about git environment in temp dir
     unset `env | cut -d'=' -f1 | grep -e '^GIT'`
     
     # Export staged changes
-    git apply ../patch
+    git apply ../patch &> /dev/null
     
     # Run tests
     ./deploy_local
 )
-popd
+popd &> /dev/null
 '''.lstrip()
 
 deploy_local_template = '''

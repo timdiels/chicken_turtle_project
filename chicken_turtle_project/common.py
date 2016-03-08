@@ -41,25 +41,16 @@ def eval_string(string, name='in_memory_string'):
     exec(code, None, locals_)
     return locals_
     
-def get_project():
+def get_project(project_root):
     '''
-    Get and validate project.py
+    Get and validate project info from project.py
     
     Returns
     -------
     dict
-        project info
-        
-    Raises
-    ------
-    UserException
-        On validation errors
+        project info.
     '''
-    project_root = Path.cwd()
-    required_attributes = set('name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split())
-    optional_attributes = set('entry_points'.split())
-    
-    # Load project info
+    # Load 
     try:
         project = eval_file(project_root / 'project.py')['project']
     except IOError:
@@ -67,14 +58,15 @@ def get_project():
     except KeyError:
         raise UserException('project.py must export a `project` variable (with a dict)')
     
+    required_attributes = set('name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split())
+    optional_attributes = set('entry_points'.split())
+    
     # Attributes that must be present    
     for attr in required_attributes:
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
-    
-    #
-    name = project['name']
-    pkg_root = name
+        
+    pkg_root = project_root / project['name']
 
     # Attributes that should not be present
     if 'version' in project:
@@ -100,7 +92,7 @@ def get_project():
         if attr != 'entry_points':
             project[attr] = project[attr].strip()
             if not project[attr]:
-                raise UserException('Attribute `{}` may not be None, empty or whitespace'.format(attr))
+                raise UserException('Attribute `{}` may not be empty or whitespace'.format(attr))
         
     # Validate project name
     if re.search('[\s-]', project['name']):
@@ -109,7 +101,7 @@ def get_project():
     # Validate readme_file
     if not re.fullmatch('(.*/)?README.[a-z0-9]+', project['readme_file']):
         raise UserException('Attribute `readme_file` must be a path with as file name "README.*", case sensitive with a lower case extension')
-    
+            
     return project
     
 def init_logging(debug=False):
@@ -148,55 +140,27 @@ def get_current_commit(repo):
     else:
         return None
     
-def get_current_version(repo):
-    '''
-    Get current version by git tag of current commit
-    
-    Parameters
-    ----------
-    repo : git.Repo
-    
-    Returns
-    -------
-    versio.version.Version
-        None if no version, version otherwise
-    '''
-    current_commit = get_current_commit(repo)  # the checked out commit
-    if not current_commit:
-        return None
-    version = None
-    for tag in repo.tags:
-        if tag.commit == current_commit:
-            try:
-                version_ = version_from_tag(tag)
-                if version:
-                    raise UserException('Checked out commit has multiple version tags, there can be only one')
-                version = version_
-            except AttributeError:
-                pass
-    return version
-    
-def get_newest_version(repo):
-    '''
-    Get newest version in git tags, returns
-    
-    Parameters
-    ----------
-    repo : git.Repo
-    
-    Returns
-    -------
-    versio.version.Version
-        A default version if no version tags found, newest version otherwise
-    '''
-    versions = []
-    for tag in repo.tags:
-        try:
-            versions.append(version_from_tag(tag))
-        except AttributeError as e:
-            logger.warning(str(e)) # XXX replace with a pass once we know this works
-    version = max(versions, default=Version('0.0.0'))
-    return version
+#TODO
+# def get_newest_version(repo):
+#     '''
+#     Get newest version in git tags, returns
+#     
+#     Parameters
+#     ----------
+#     repo : git.Repo
+#     
+#     Returns
+#     -------
+#     versio.version.Version
+#         A default version if no version tags found, newest version otherwise
+#     '''
+#     versions = []
+#     for tag in repo.tags:
+#         try:
+#             versions.append(version_from_tag(tag))
+#         except AttributeError as e:
+#             logger.warning(str(e)) # XXX replace with a pass once we know this works
+#     return versions
     
 def version_from_tag(tag):
     '''
