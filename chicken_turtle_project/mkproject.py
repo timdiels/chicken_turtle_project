@@ -21,21 +21,22 @@ git_ = pb.local['git']
 
 _dummy_version = '0.0.0'
 
-def main():
-    _main(help_option_names=['-h', '--help'])
+def main(args=None):
+    _main(args, help_option_names=['-h', '--help'])
 
 @click.command()
 @cli.option(
     '--pre-commit/--no-pre-commit',
-    default=False, is_flag=True, required=False,
+    default=False, is_flag=True,
     help='Internal option, do not use.'
 )
-# @cli.option(
-#     '--project-version',
-#     help='Internal option, do not use.'
-# )
+@cli.option(
+    '--project-version',
+    default=_dummy_version,
+    help='Internal option, do not use.'
+)
 @click.version_option(version=__version__)
-def _main(pre_commit): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
+def _main(pre_commit, project_version):
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
@@ -94,7 +95,7 @@ def _main(pre_commit): # XXX click to show help message and version; also on mks
         
         project = get_project(project_root)
         pkg_root = project_root / project['name']
-        project['version'] = _dummy_version  #TODO version will be provided by ct-release via --version (not to be used directly by users), defaults to this
+        project['version'] = project_version
         
         _ensure_root_package_exists(pkg_root)
         _update_root_package(pkg_root, project['version'])

@@ -283,3 +283,17 @@ def assert_process_fails(stderr_matches):
     with pytest.raises(pb.ProcessExecutionError) as ex:
         yield
     assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
+    
+@contextmanager
+def assert_system_exit(capsys, stderr_matches):
+    '''
+    Assert process raises SystemExit (i.e. sys.exit(non-zero))
+    
+    stderr_matches : str
+        Assert stderr matches regex pattern 
+    '''
+    with pytest.raises(SystemExit) as ex:
+        yield
+    _, err = capsys.readouterr()
+    assert re.search(stderr_matches, err), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
+    

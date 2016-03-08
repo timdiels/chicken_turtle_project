@@ -2,10 +2,21 @@
 ct-release tests
 '''
 
-from chicken_turtle_project.test.common import create_project, assert_process_fails, git_, mkproject
-import plumbum as pb
+from chicken_turtle_util.exceptions import UserException
+from chicken_turtle_project.test.common import create_project, assert_system_exit, git_
+from chicken_turtle_project.release import main as release_
+import pytest
+import re
 
-release = pb.local['ct-release']['--dry-run']
+## fixtures, util ##########################
+
+def release(*args):
+    release_(args)
+    
+# @pytest.fixture(autouse=True, scope='function')
+# def mocked_release(mocker):
+#     stub = mocker.patch('chicken_turtle_project.release._release')
+#     return stub
 
 # def create_release_project():
 #     '''
@@ -14,21 +25,18 @@ release = pb.local['ct-release']['--dry-run']
 #     create_project()
 #     git_('add', '.')
 #     mkproject()
-    
 
 ## tests ##########################
 
-def test_dirty(tmpcwd):
+def test_dirty(tmpcwd, capsys):
     '''
     When working directory is dirty, error
     '''
     create_project()  # leaves behind untracked files
-    with assert_process_fails(stderr_matches=r'(?i)error.+untracked'):
-        release('--version', '1.0.0')
-    
-'''
--n --dry-run
+    with assert_system_exit(capsys, stderr_matches='(?i)error.+untracked'):
+        release('--project-version', '1.0.0')
 
+'''
 call with --version (assume click knows how to do requiredness)
 if working dir is dirty, error
 release to test if any (try with and without)

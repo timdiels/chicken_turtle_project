@@ -50,7 +50,7 @@ setup(
                             'pytest',
                             'pytest-xdist',
                             'pytest-env',
-                            'pytest-cov'],
+                            'pytest-mock'],
     'keywords': 'development release setuptools tools',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'
