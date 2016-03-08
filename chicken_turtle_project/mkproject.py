@@ -284,7 +284,8 @@ def _update_setup_py(project, project_root, pkg_root):
     
     # Write setup.py
     del project['readme_file']
-    del project['index_test']
+    if 'index_test' in project:
+        del project['index_test']
     del project['index_production']
     logger.info('Writing setup.py')
     setup_py_path = project_root / 'setup.py'

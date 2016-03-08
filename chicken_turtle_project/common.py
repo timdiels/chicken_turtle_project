@@ -58,8 +58,8 @@ def get_project(project_root):
     except KeyError:
         raise UserException('project.py must export a `project` variable (with a dict)')
     
-    required_attributes = set('name readme_file description author author_email url license classifiers keywords download_url index_test index_production'.split())
-    optional_attributes = set('entry_points'.split())
+    required_attributes = {'name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
+    optional_attributes = {'entry_points', 'index_test'}
     
     # Attributes that must be present    
     for attr in required_attributes:

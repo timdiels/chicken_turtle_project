@@ -95,6 +95,7 @@ Permissions (each permission level includes all the above, e.g. overwrite may al
 # non-default minimal project description
 project1 = project_defaults.copy()
 del project1['entry_points']
+del project1['index_test']
 project1.update(
     author='mittens',
     author_email='mittens@test.com',
