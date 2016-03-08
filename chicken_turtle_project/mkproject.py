@@ -245,6 +245,7 @@ def _raise_if_missing_file(project):
 def _ensure_precommit_hook_exists(project_root):    
     pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
     if not pre_commit_hook_path.exists():
+        logger.info('Creating .git/hooks/pre-commit')
         with pre_commit_hook_path.open('w') as f:
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
