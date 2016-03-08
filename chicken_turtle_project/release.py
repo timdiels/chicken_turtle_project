@@ -16,12 +16,34 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from chicken_turtle_project.common import graceful_main, get_repo, get_newest_version, get_current_version, get_project, init_logging
+from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging, raise_if_repo_dirty
 from pathlib import Path
 import plumbum as pb
 import logging
 
 logger = logging.getLogger(__name__)
+
+#TODO
+# def get_newest_version(repo):
+#     '''
+#     Get newest version in git tags, returns
+#     
+#     Parameters
+#     ----------
+#     repo : git.Repo
+#     
+#     Returns
+#     -------
+#     versio.version.Version
+#         A default version if no version tags found, newest version otherwise
+#     '''
+#     versions = []
+#     for tag in repo.tags:
+#         try:
+#             versions.append(version_from_tag(tag))
+#         except AttributeError as e:
+#             logger.warning(str(e)) # XXX replace with a pass once we know this works
+#     return versions
 
 def main():
     '''
@@ -37,37 +59,37 @@ def main():
 def _main():
     # Note: The pre-commit hook already does most of the project validation
     project_root = Path.cwd()
+    repo = get_repo(project_root)
     project = get_project(project_root)
     
     # Working directory must be clean (no untracked/modified files)
-    repo = get_repo(project_root)
-    if repo.is_dirty:
-        raise UserException('Please first commit or stash your changes')
+    raise_if_repo_dirty(repo)
+    #pb.local['ct-mkproject'] & pb.FG
     
     # Current commit must have version tag
-    version = get_current_version(repo)
-    if not version:
-        raise UserException('Please assign a version with `git tag v{{version}}, newest version is {}`'.format(str(get_newest_version())))
+#     version = get_current_version(repo)
+#     if not version:
+#         raise UserException('Please assign a version with `git tag v{{version}}, newest version is {}`'.format(str(get_newest_version())))
     
     assert False
     
     #TODO use:
     # If version tag, warn if it is less than that of an ancestor commit 
-    version = get_current_version(repo) #TODO
-    if version:
-        ancestors = list(repo.commit().iter_parents())
-        versions = []
-        for tag in repo.tags:
-            if tag.commit in ancestors:
-                try:
-                    versions.append(version_from_tag(tag))
-                except AttributeError:
-                    pass
-        newest_ancestor_version = max(versions)
-        if version < newest_ancestor_version:
-            logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
-            if not click.confirm('Do you want to continue anyway?'):
-                raise UserException('Cancelled')
+#     version = get_current_version(repo) #TODO
+#     if version:
+#         ancestors = list(repo.commit().iter_parents())
+#         versions = []
+#         for tag in repo.tags:
+#             if tag.commit in ancestors:
+#                 try:
+#                     versions.append(version_from_tag(tag))
+#                 except AttributeError:
+#                     pass
+#         newest_ancestor_version = max(versions)
+#         if version < newest_ancestor_version:
+#             logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
+#             if not click.confirm('Do you want to continue anyway?'):
+#                 raise UserException('Cancelled')
             
     # Release to test index (if any)
     if 'index_test' in project:
