@@ -19,8 +19,6 @@ from signal import signal, SIGPIPE, SIG_DFL
 from pathlib import Path
 from contextlib import contextmanager
 from chicken_turtle_util.exceptions import UserException, log_exception
-from versio.version import Version
-from versio.version_scheme import Pep440VersionScheme
 from functools import partial
 import git
 import sys
@@ -28,8 +26,6 @@ import re
 
 import logging
 logger = logging.getLogger(__name__)
-
-Version = partial(Version, scheme=Pep440VersionScheme)
 
 def eval_file(path): #TODO move into chicken turtle util
     with path.open() as f:
@@ -126,41 +122,10 @@ def graceful_main(logger):
 def get_repo(project_root):
     return git.Repo(str(project_root))
 
-def get_current_commit(repo):
-    '''
-    Get currently checked out commit
-    
-    Returns
-    -------
-    git.Commit
-        The currently checked out commit or None if repo is empty.
-    '''
-    if repo.heads:
-        repo.commit()
-    else:
-        return None
-    
-#TODO
-# def get_newest_version(repo):
-#     '''
-#     Get newest version in git tags, returns
-#     
-#     Parameters
-#     ----------
-#     repo : git.Repo
-#     
-#     Returns
-#     -------
-#     versio.version.Version
-#         A default version if no version tags found, newest version otherwise
-#     '''
-#     versions = []
-#     for tag in repo.tags:
-#         try:
-#             versions.append(version_from_tag(tag))
-#         except AttributeError as e:
-#             logger.warning(str(e)) # XXX replace with a pass once we know this works
-#     return versions
+def raise_if_repo_dirty(repo):
+    # Raise if repo has unstaged changes or untracked files
+    if repo.is_dirty(index=False, working_tree=True, untracked_files=True):
+        raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash -u`) or add them to .gitignore.')
     
 def version_from_tag(tag):
     '''
@@ -168,16 +133,16 @@ def version_from_tag(tag):
     
     Returns
     -------
-    versio.version.Version
+    str
         The version the version tag represents 
     
     Raises
     ------
-    AttributeError
+    ValueError
         If tag name is not of format v{version}, i.e. not a version tag
     '''
     name = Path(tag.name).name
     if name[0] != 'v':
-        raise AttributeError('{} is not a version tag'.format(tag))
-    return Version(name[1:])
+        raise ValueError('{} is not a version tag'.format(tag))
+    return name[1:]
     

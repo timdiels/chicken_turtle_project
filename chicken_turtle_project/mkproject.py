@@ -1,10 +1,12 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, raise_if_repo_dirty
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
 from glob import glob
 from configparser import ConfigParser
+from chicken_turtle_project import __version__
+from chicken_turtle_util import cli
 import plumbum as pb
 import pypandoc
 import click
@@ -19,7 +21,21 @@ git_ = pb.local['git']
 
 _dummy_version = '0.0.0'
 
-def main(): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
+def main():
+    _main(help_option_names=['-h', '--help'])
+
+@click.command()
+@cli.option(
+    '--pre-commit/--no-pre-commit',
+    default=False, is_flag=True, required=False,
+    help='Internal option, do not use.'
+)
+# @cli.option(
+#     '--project-version',
+#     help='Internal option, do not use.'
+# )
+@click.version_option(version=__version__)
+def _main(pre_commit): # XXX click to show help message and version; also on mksetup and other tools. Also include the output from -h in the readme automatically, i.e. compile the readme (or maybe reST can? or maybe we should use Sphinx instead?).
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
@@ -67,15 +83,12 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
     '''
     init_logging()
     with graceful_main(logger):
-        is_precommit = 'CT_GIT_HOOK' in pb.local.env  #TODO --pre-commit option instead
         project_root = Path.cwd()
+        repo = get_repo(project_root)
         
-        if is_precommit:
-            # Raise if repo has unstaged changes or untracked files
+        if pre_commit:
             # Note: previous changes by mkproject will have been staged, so if dirty, it's caused by the user
-            repo = get_repo(project_root)
-            if repo.is_dirty(index=False, working_tree=True, untracked_files=True):
-                raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash -u`) or add them to .gitignore.')
+            raise_if_repo_dirty(repo)
         
         _ensure_project_exists(project_root)
         
@@ -114,7 +127,11 @@ def main(): # XXX click to show help message and version; also on mksetup and ot
         _update_requirements_txt()
         _update_setup_py(project, project_root, pkg_root)
         
-        assert not is_precommit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)  # starting from tidy, we should leave it tidy 
+        if pre_commit:
+            try:
+                raise_if_repo_dirty(repo)
+            except UserException:
+                assert False  # starting from tidy, we should leave it tidy   
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
@@ -434,7 +451,7 @@ cleanup() {
 }
 
 # Update project
-CT_GIT_HOOK=pre-commit ct-mkproject
+ct-mkproject --pre-commit
 
 # Export last commit + staged changes
 trap cleanup EXIT

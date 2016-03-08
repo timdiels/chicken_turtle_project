@@ -45,7 +45,6 @@ setup(
                             'plumbum',
                             'pypandoc',
                             'GitPython',
-                            'versio',
                             'pip-tools',
                             'checksumdir',
                             'pytest',
