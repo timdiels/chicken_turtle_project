@@ -430,7 +430,6 @@ set -e
 
 cleanup() {
     set +e
-    >&2 echo Cleaning
     rm -rf "$temp_dir"
 }
 
