@@ -50,7 +50,7 @@ def _main(project_version):
     Must be run in the project root.
     '''
     init_logging()
-    with graceful_main(logger):
+    with graceful_main(logger):        
         # Note: The pre-commit hook already does most of the project validation
         project_root = Path.cwd()
         repo = get_repo(project_root)
@@ -82,7 +82,14 @@ def _main(project_version):
                 
         # If version is less than that of an ancestor commit, ask to continue
         if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit ({}). Do you want to release anyway?'.format(newest_ancestor_version)):
-            raise UserException('Cancelled') 
+            raise UserException('Cancelled')
+        
+        # Check origin is configured correctly
+        logger.info('Validating git remote')
+        try:
+            git_('ls-remote', 'origin')
+        except ProcessExecutionError as ex:
+            raise UserException('Cannot access remote: origin') from ex 
         
         # Validation done, release
         with pb.local.env(CT_PROJECT_VERSION=str(project_version)):
