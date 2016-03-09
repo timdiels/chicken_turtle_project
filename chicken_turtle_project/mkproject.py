@@ -435,6 +435,7 @@ __pycache__
 *.egg-info
 .cache
 last_test_runs
+dist
 '''
 gitignore_patterns = {line for line in map(str.strip, gitignore_patterns.splitlines()) if line}
 
