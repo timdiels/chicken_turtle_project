@@ -36,6 +36,7 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
+    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v1.0.0.dev2',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
@@ -128,5 +129,5 @@ setup(
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '0.0.0'}
+    'version': '1.0.0.dev2'}
 )
