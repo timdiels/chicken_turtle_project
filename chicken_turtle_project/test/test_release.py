@@ -101,7 +101,7 @@ def test_older_than_ancestor(tmpcwd, capsys):
     
     result = CliRunner().invoke(release__, ['--project-version', '1.0.0'], input='y\n')
     assert not result.exception
-    assert 'v2.0.0' in result.output
+    assert '2.0.0' in result.output
     assert 'less than' in result.output
     assert 'Do you want to' in result.output
     

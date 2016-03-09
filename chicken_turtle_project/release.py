@@ -55,6 +55,7 @@ def _main(project_version):
         project_root = Path.cwd()
         repo = get_repo(project_root)
         project = get_project(project_root)
+        version_tag = 'v{}'.format(project_version)
         
         # Working directory must be clean (no untracked/modified files)
         if repo.is_dirty(untracked_files=True):
@@ -80,35 +81,61 @@ def _main(project_version):
         newest_ancestor_version = max(versions, default=Version('0.0.0'))
                 
         # If version is less than that of an ancestor commit, ask to continue
-        if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit (v{}). Do you want to release anyway?'.format(newest_ancestor_version)):
+        if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit ({}). Do you want to release anyway?'.format(newest_ancestor_version)):
             raise UserException('Cancelled') 
         
         # Validation done, release
         with pb.local.env(CT_PROJECT_VERSION=str(project_version)):
-            # Prepare release
-            logger.info('Preparing to commit versioned project')
-            pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
+            released = False  # whether we have released anything of current version yet
+            committed = False
+            tag_created = False
             
-            logger.info('Committing')
-            git_['commit', '-m', 'Release v{}'.format(project_version)] & pb.FG
+            try:
+                # Prepare release
+                logger.info('Preparing to commit versioned project')
+                pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
+                
+                logger.info('Committing')
+                git_['commit', '-m', 'Release {}'.format(version_tag)] & pb.FG
+                committed = True
+                
+                logger.info('Tagging commit as "{}"'.format(version_tag))
+                git_('tag', version_tag)
+                tag_created = True
+
+                # Release                     
+                try:
+                    # to test index (if any)
+                    if 'index_test' in project:
+                        _release(project['index_test'])
+                        released=True
+                
+                    # to production index
+                    _release(project['index_production'])
+                    released=True
+                except ReleaseException as ex:
+                    if ex.partial:
+                        released=True
+                    raise
             
-            logger.info('Tagging commit as "v{}"'.format(project_version))
-            git_('tag', 'v{}'.format(project_version))
-             
-            # Release to test index (if any)
-            if 'index_test' in project:
-                _release(project['index_test'])
-        
-            # Release to production index
-            _release(project['index_production'])
-            logger.info('Released')
-             
-            # Pushing
-            logger.info('Pushing commits to remote')
-            git_('push')
-             
-            logger.info('Pushing tag to remote')
-            git_('push', 'origin', 'v{}'.format(project_version))
+                # Push
+                try:
+                    logger.info('Pushing commits to remote')
+                    git_('push')
+                     
+                    logger.info('Pushing tag to remote')
+                    git_('push', 'origin', version_tag)
+                except:
+                    logger.error('Failed to push. Run the following once the issue is resolved to complete the release: git push && git push origin v{}'.format(project_version))
+                    raise
+            except:
+                if not released:
+                    logger.warning('Something went wrong, but nothing was released, rolling back')
+                    if committed:
+                        git_('reset', '--hard', 'HEAD^')
+                    if tag_created:
+                        git_('tag', '-d', version_tag)
+                raise
     
 def _version_from_tag(tag):
     '''
@@ -134,13 +161,44 @@ def _version_from_tag(tag):
 # that actually releases to an index should leave this function's
 # dynamic scope!
 def _release(index_name):
+    '''
+    Returns False if not at all released, True if partial or fully released
+    '''
     logger.info('Releasing to {}'.format(index_name))
-    setup('register', '-r', index_name)
-    setup('sdist', 'upload', '-r', index_name)
+    
+    try:
+        setup('register', '-r', index_name)
+    except ProcessExecutionError as ex:
+        raise ReleaseException(partial=False, index_name=index_name) from ex
+    
+    try:
+        setup('sdist', 'upload', '-r', index_name)
+    except ProcessExecutionError as ex:
+        raise ReleaseException(partial=True, index_name=index_name) from ex
+    
+    logger.info('Released to {}'.format(index_name))
     
 _setup = pb.local['python']['setup.py']
 def setup(*args):
     code, out, err = _setup.run(args)  # always has exit code 0
     if 'Server response (200): OK' not in (out + err):
         raise ProcessExecutionError(args, code, out, err)
+    
+class ReleaseException(Exception):
+    
+    '''Release failed'''
+    
+    def __init__(self, partial, index_name):
+        '''
+        Parameters
+        ----------
+        partial : bool
+            Whether the release failed completely or partially
+        index_name : str
+            Index to which we were releasing
+        '''
+        partial_msg = ', but did release partially!' if partial else ''
+        super().__init__('Failed to release to {}{}'.format(index_name, partial_msg))
+        self.partial = partial
+        self.index_name = index_name
     

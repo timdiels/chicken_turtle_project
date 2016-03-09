@@ -311,7 +311,7 @@ def _update_setup_py(project, project_root, pkg_root):
   
 def _get_install_requires(project_root):
     # List dependencies
-    logger.info('Preparing to write setup.py')
+    logger.debug('Preparing to write setup.py')
     with (project_root / 'requirements.in').open('r') as f:
         dependencies = []
         # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
