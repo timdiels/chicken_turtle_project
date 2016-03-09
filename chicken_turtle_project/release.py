@@ -22,6 +22,7 @@ from chicken_turtle_util import cli
 from functools import partial
 from pathlib import Path
 import plumbum as pb
+from plumbum.commands import ProcessExecutionError
 import logging
 import versio.version
 import versio.version_scheme
@@ -97,26 +98,17 @@ def _main(project_version):
             # Release to test index (if any)
             if 'index_test' in project:
                 _release(project['index_test'])
-            
+        
             # Release to production index
             _release(project['index_production'])
             logger.info('Released')
-            
+             
             # Pushing
             logger.info('Pushing commits to remote')
             git_('push')
-            
+             
             logger.info('Pushing tag to remote')
             git_('push', 'origin', 'v{}'.format(project_version))
-    
-# Note: this function is mocked in a unit test, none of the code
-# that actually releases to an index should leave this function's
-# dynamic scope!
-def _release(index_name):
-    logger.info('Releasing to {}'.format(index_name))
-    setup = pb.local['python']['setup.py']
-    setup('register', '-r', index_name)
-    setup('sdist', 'upload', '-r', index_name)  
     
 def _version_from_tag(tag):
     '''
@@ -136,4 +128,19 @@ def _version_from_tag(tag):
     if name[0] != 'v':
         raise ValueError('{} is not a version tag'.format(tag))
     return name[1:]
+    
+
+# Note: this function is mocked in a unit test, none of the code
+# that actually releases to an index should leave this function's
+# dynamic scope!
+def _release(index_name):
+    logger.info('Releasing to {}'.format(index_name))
+    setup('register', '-r', index_name)
+    setup('sdist', 'upload', '-r', index_name)
+    
+_setup = pb.local['python']['setup.py']
+def setup(*args):
+    code, out, err = _setup.run(args)  # always has exit code 0
+    if 'Server response (200): OK' not in (out + err):
+        raise ProcessExecutionError(args, code, out, err)
     
