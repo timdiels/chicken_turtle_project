@@ -86,10 +86,10 @@ def _main(project_version):
         with pb.local.env(CT_PROJECT_VERSION=str(project_version)):
             # Prepare release
             logger.info('Preparing to commit versioned project')
-            pb.local['ct-mkproject'] & pb.FG  # Update with version
+            pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
             
             logger.info('Committing')
-            git_('commit', '-m', 'Release v{}'.format(project_version))
+            git_['commit', '-m', 'Release v{}'.format(project_version)] & pb.FG
             
             logger.info('Tagging commit as "v{}"'.format(project_version))
             git_('tag', 'v{}'.format(project_version))
@@ -113,8 +113,7 @@ def _main(project_version):
 # that actually releases to an index should leave this function's
 # dynamic scope!
 def _release(index_name):
-    assert False, 'Not mocked!'
-    logger.info('Releasing to production index')
+    logger.info('Releasing to {}'.format(index_name))
     setup = pb.local['python']['setup.py']
     setup('register', '-r', index_name)
     setup('sdist', 'upload', '-r', index_name)  
