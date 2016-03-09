@@ -22,6 +22,7 @@ pytest-xdist==1.14
 pytest==2.8.7
 six==1.10.0               # via pip-tools
 smmap==0.9.0              # via gitdb
+versio==0.3.0
 
 # The following packages are commented out because they are
 # considered to be unsafe in a requirements file:

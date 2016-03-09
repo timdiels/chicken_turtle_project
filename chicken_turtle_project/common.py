@@ -16,10 +16,8 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from signal import signal, SIGPIPE, SIG_DFL
-from pathlib import Path
 from contextlib import contextmanager
 from chicken_turtle_util.exceptions import UserException, log_exception
-from functools import partial
 import git
 import sys
 import re
@@ -121,5 +119,3 @@ def graceful_main(logger):
 
 def get_repo(project_root):
     return git.Repo(str(project_root))
-
-    

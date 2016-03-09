@@ -47,6 +47,7 @@ setup(
                             'GitPython',
                             'pip-tools',
                             'checksumdir',
+                            'versio',
                             'pytest',
                             'pytest-xdist',
                             'pytest-env',

@@ -5,6 +5,7 @@ pypandoc
 GitPython
 pip-tools
 checksumdir
+versio
 
 # testing
 pytest

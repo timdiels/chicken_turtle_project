@@ -19,13 +19,18 @@ from chicken_turtle_util.exceptions import UserException, log_exception
 from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
+from functools import partial
 from pathlib import Path
-import click
 import plumbum as pb
 import logging
+import versio.version
+import versio.version_scheme
+import click
 
 logger = logging.getLogger(__name__)
 git_ = pb.local['git']
+Version = partial(versio.version.Version, scheme=versio.version_scheme.Pep440VersionScheme)
+Version.__name__ = 'Version'
 
 def main(args=None):
     _main(args, help_option_names=['-h', '--help'])
@@ -33,6 +38,7 @@ def main(args=None):
 @click.command()
 @cli.option(
     '--project-version',
+    type=Version,
     help='Version of the project release, e.g. "1.0.0-dev2". Versions must adhere to PEP-0440 and preferably make use of semantic versioning.'
 )
 @click.version_option(version=__version__)
@@ -61,25 +67,23 @@ def _main(project_version):
             except ValueError:
                 pass
         
-        #TODO use:
-        # If version tag, warn if it is less than that of an ancestor commit 
-    #     version = get_current_version(repo) #TODO
-    #     if version:
-    #         ancestors = list(repo.commit().iter_parents())
-    #         versions = []
-    #         for tag in repo.tags:
-    #             if tag.commit in ancestors:
-    #                 try:
-    #                     versions.append(version_from_tag(tag))
-    #                 except AttributeError:
-    #                     pass
-    #         newest_ancestor_version = max(versions)
-    #         if version < newest_ancestor_version:
-    #             logger.warning('Current version ({}) is older than ancestor commit version ({})'.format(version, newest_ancestor_version))
-    #             if not click.confirm('Do you want to continue anyway?'):
-    #                 raise UserException('Cancelled')
+        # Get newest ancestor version
+        ancestors = list(repo.commit().iter_parents())
+        versions = []
+        for tag in repo.tags:
+            if tag.commit in ancestors:
+                try:
+                    versions.append(_version_from_tag(tag))
+                except AttributeError:
+                    pass
+        newest_ancestor_version = max(versions, default=Version('0.0.0'))
+                
+        # If version is less than that of an ancestor commit, ask to continue
+        if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit (v{}). Do you want to release anyway?'.format(newest_ancestor_version)):
+            raise UserException('Cancelled') 
         
-        with pb.local.env(CT_PROJECT_VERSION=project_version):
+        # Validation done, release
+        with pb.local.env(CT_PROJECT_VERSION=str(project_version)):
             # Prepare release
             logger.info('Preparing to commit versioned project')
             pb.local['ct-mkproject'] & pb.FG  # Update with version
