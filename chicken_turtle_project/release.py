@@ -113,7 +113,7 @@ def _main(project_version):
                     # to production index
                     _release(project['index_production'])
                     released=True
-                except ReleaseException as ex:
+                except ReleaseError as ex:
                     if ex.partial:
                         released=True
                     raise
@@ -169,12 +169,12 @@ def _release(index_name):
     try:
         setup('register', '-r', index_name)
     except ProcessExecutionError as ex:
-        raise ReleaseException(partial=False, index_name=index_name) from ex
+        raise ReleaseError(partial=False, index_name=index_name) from ex
     
     try:
         setup('sdist', 'upload', '-r', index_name)
     except ProcessExecutionError as ex:
-        raise ReleaseException(partial=True, index_name=index_name) from ex
+        raise ReleaseError(partial=True, index_name=index_name) from ex
     
     logger.info('Released to {}'.format(index_name))
     
@@ -184,7 +184,7 @@ def setup(*args):
     if 'Server response (200): OK' not in (out + err):
         raise ProcessExecutionError(args, code, out, err)
     
-class ReleaseException(Exception):
+class ReleaseError(Exception):
     
     '''Release failed'''
     
