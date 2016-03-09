@@ -74,14 +74,14 @@ def test_no_test_index(tmpcwd, mocked_release):
     release('--project-version', '1.0.0')
     assert mocked_release.call_args_list == [(('pypi',),)]
     
-# def test_no_reuse_versions(tmpcwd, mocked_release, capsys):
-#     '''
-#     When previously used version is specified, fail gracefully
-#     '''
-#     create_release_project()
-#     release('--project-version', '1.0.0')
-#     with assert_system_exit(capsys, stderr_matches='already exists'):
-#         release('--project-version', '1.0.0')
+def test_no_reuse_versions(tmpcwd, mocked_release, capsys):
+    '''
+    When previously used version is specified, fail gracefully
+    '''
+    create_release_project()
+    release('--project-version', '1.0.0')
+    with assert_system_exit(capsys, stderr_matches='version has been released before'):
+        release('--project-version', '1.0.0')
 
 '''
 --version: 

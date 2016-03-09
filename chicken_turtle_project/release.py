@@ -53,6 +53,14 @@ def _main(project_version):
         if repo.is_dirty(untracked_files=True):
             raise UserException('Git repo is not clean, please stash or commit all untracked files and changes')
         
+        # Disallow reuse of previous versions
+        for tag in repo.tags:
+            try:
+                if _version_from_tag(tag) == project_version:
+                    raise UserException('This version has been released before')
+            except ValueError:
+                pass
+        
         #TODO use:
         # If version tag, warn if it is less than that of an ancestor commit 
     #     version = get_current_version(repo) #TODO
@@ -106,4 +114,23 @@ def _release(index_name):
     setup = pb.local['python']['setup.py']
     setup('register', '-r', index_name)
     setup('sdist', 'upload', '-r', index_name)  
+    
+def _version_from_tag(tag):
+    '''
+    Get version from version tag
+    
+    Returns
+    -------
+    str
+        The version the version tag represents 
+    
+    Raises
+    ------
+    ValueError
+        If tag name is not of format v{version}, i.e. not a version tag
+    '''
+    name = Path(tag.name).name
+    if name[0] != 'v':
+        raise ValueError('{} is not a version tag'.format(tag))
+    return name[1:]
     

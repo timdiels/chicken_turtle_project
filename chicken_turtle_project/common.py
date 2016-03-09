@@ -121,23 +121,5 @@ def graceful_main(logger):
 
 def get_repo(project_root):
     return git.Repo(str(project_root))
-    
-def version_from_tag(tag):
-    '''
-    Get version from version tag
-    
-    Returns
-    -------
-    str
-        The version the version tag represents 
-    
-    Raises
-    ------
-    ValueError
-        If tag name is not of format v{version}, i.e. not a version tag
-    '''
-    name = Path(tag.name).name
-    if name[0] != 'v':
-        raise ValueError('{} is not a version tag'.format(tag))
-    return name[1:]
+
     
