@@ -171,4 +171,3 @@ def test_editable_requirements(tmpcwd, capsys):
     result = release('--project-version', '1.0.0')
     assert result.exit_code != 0
     assert 'No editable requirements (-e) allowed for release' in result.output
-        
