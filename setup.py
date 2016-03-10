@@ -40,7 +40,7 @@ setup(
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'install_requires': [   'chicken_turtle_util',
+    'install_requires': [   'chicken_turtle_util==1.0.0',
                             'click',
                             'plumbum',
                             'pypandoc',

@@ -4,9 +4,9 @@
 #
 #    pip-compile requirements.in
 #
--e file:///mnt/data/doc/eclipse_workspace/chicken_turtle_util
 apipkg==1.4               # via execnet
 checksumdir==1.0.5
+chicken-turtle-util==1.0.0
 click==6.3
 execnet==1.4.1            # via pytest-xdist
 first==2.0.1              # via pip-tools
