@@ -44,7 +44,7 @@ project = dict(
     author_email='timdiels.m@gmail.com',
     license='LGPL3',
     url='https://github.com/timdiels/chicken_turtle_project', # project homepage
-    download_url='https://github.com/timdiels/chicken_turtle_project/releases/v{version}',
+    download_url='https://github.com/timdiels/chicken_turtle_project/releases/v{version}.tar.gz',
     index_test='pypitest',
     index_production='pypi',
      

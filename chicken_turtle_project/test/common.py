@@ -186,6 +186,32 @@ files_create_project = {Path(file) for file in 'operation_mittens operation_mitt
 
 def write_project(project):
     write_file('project.py', 'project = ' + pprint.pformat(project))
+    
+
+_requirements_in_difficult_template = '''
+# line-comment
+pytest  # in-line comment
+pytest-xdist<5.0.0 # version
+# more comment
+pytest-env==0.6
+-e ./pkg_magic
+     
+pytest-cov
+
+'''
+
+_pkg_magic_setup_py_template = '''
+from setuptools import setup
+setup(name='pkg4')
+'''
+
+def write_complex_requirements_in():
+    '''
+    Write requirements.in with -e deps and comments
+    '''
+    write_file('requirements.in', _requirements_in_difficult_template)
+    Path('pkg_magic').mkdir()
+    write_file('pkg_magic/setup.py', _pkg_magic_setup_py_template)
 
 ## assertion util ##############################
 
@@ -284,28 +310,6 @@ def assert_process_fails(stderr_matches):
         yield
     assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
     
-@contextmanager
-def assert_system_exit(capsys, stderr_matches):
-    '''
-    Assert process raises SystemExit (i.e. sys.exit(non-zero))
-    
-    stderr_matches : str
-        Assert stderr matches regex pattern 
-    '''
-    with pytest.raises(SystemExit) as ex:
-        yield
-    _, stderr = capsys.readouterr()
-    assert ex.value.code != 0
-    assert re.search(stderr_matches, stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, stderr)
-    
-@contextmanager
-def suppress_system_exit_0():
-    '''
-    Suppress SystemExit with code 0 (which is success)
-    '''
-    try:
-        yield
-    except SystemExit as ex:
-        if ex.code != 0:
-            raise
+def assert_re_search(pattern, string):
+    assert re.search(pattern, string), 'Expected regex: {}\nto match: {}'.format(pattern, string)
     

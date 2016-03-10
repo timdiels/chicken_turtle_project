@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException, log_exception
-from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging
+from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging, parse_requirements_file
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
 from functools import partial
@@ -32,25 +32,22 @@ logger = logging.getLogger(__name__)
 git_ = pb.local['git']
 Version = partial(versio.version.Version, scheme=versio.version_scheme.Pep440VersionScheme)
 Version.__name__ = 'Version'
-
-def main(args=None):
-    _main(args, help_option_names=['-h', '--help'])
     
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help'])) #TODO put in CT util cli
 @cli.option(
     '--project-version',
     type=Version,
     help='Version of the project release, e.g. "1.0.0-dev2". Versions must adhere to PEP-0440 and preferably make use of semantic versioning.'
 )
 @click.version_option(version=__version__)
-def _main(project_version):
+def main(project_version):
     '''
     Release the project to your configured test (optional) and production index
     
     Must be run in the project root.
     '''
     init_logging()
-    with graceful_main(logger):        
+    with graceful_main(logger):
         # Note: The pre-commit hook already does most of the project validation
         project_root = Path.cwd()
         repo = get_repo(project_root)
@@ -84,12 +81,17 @@ def _main(project_version):
         if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit ({}). Do you want to release anyway?'.format(newest_ancestor_version)):
             raise UserException('Cancelled')
         
+        # If requirements.txt contains -e, abort
+        for editable, dependency in parse_requirements_file(project_root / 'requirements.in'):
+            if editable:
+                raise UserException('No editable requirements (-e) allowed for release: See "{}" in requirements.in.'.format(dependency))
+        
         # Check origin is configured correctly
         logger.info('Validating git remote')
         try:
             git_('ls-remote', 'origin')
         except ProcessExecutionError as ex:
-            raise UserException('Cannot access remote: origin') from ex 
+            raise UserException('Cannot access remote: origin') from ex
         
         # Validation done, release
         with pb.local.env(CT_PROJECT_VERSION=str(project_version)):

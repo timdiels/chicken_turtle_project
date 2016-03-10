@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -312,17 +312,12 @@ def _update_setup_py(project, project_root, pkg_root):
 def _get_install_requires(project_root):
     # List dependencies
     logger.debug('Preparing to write setup.py')
-    with (project_root / 'requirements.in').open('r') as f:
-        dependencies = []
-        # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
-        for line in f.readlines():
-            match = re.match('^\s*(-e\s+)?([^#\s-][^#]*)', line)
-            if match:
-                dependency = match.group(2).strip()
-                if match.group(1):
-                    # transform editable dependency into its package name
-                    dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
-                dependencies.append(dependency)
+    dependencies = []
+    for editable, dependency in parse_requirements_file(project_root / 'requirements.in'):
+        if editable:
+            # transform editable dependency into its package name
+            dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
+        dependencies.append(dependency)
     return dependencies
     
 def _get_package_data(project_root, pkg_root):

@@ -7,7 +7,7 @@ from chicken_turtle_project.test.common import (
     git_, requirements_in1, license_txt1, readme1, test_one1, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
     read_file, gitignore1, get_setup_args, files_create_project,
-    pkg_init1
+    pkg_init1, write_complex_requirements_in
 )
 from contextlib import ExitStack
 from chicken_turtle_project.common import eval_file
@@ -215,23 +215,6 @@ def test_updates(tmpcwd):
     assert config['pytest']['testpaths'] == 'operation_mittens/test'  # overwritten
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
-        
-requirements_in_difficult_template = '''
-# line-comment
-pytest  # in-line comment
-pytest-xdist<5.0.0 # version
-# more comment
-pytest-env==0.6
--e ./pkg_magic
-     
-pytest-cov
-
-'''
-
-pkg_magic_setup_py_template = '''
-from setuptools import setup
-setup(name='pkg4')
-'''
 
 def test_setup_py(tmpcwd):
     '''
@@ -246,11 +229,7 @@ def test_setup_py(tmpcwd):
     project = project1.copy()
     project['entry_points'] = project_defaults['entry_points']
     write_project(project)
-    
-    # requirements.in
-    write_file('requirements.in', requirements_in_difficult_template)
-    Path('pkg_magic').mkdir()
-    write_file('pkg_magic/setup.py', pkg_magic_setup_py_template)
+    write_complex_requirements_in()
     
     # Create package_data in operation_mittens/test (it actually may be in non-test as well):
     Path('operation_mittens/test/data').mkdir()

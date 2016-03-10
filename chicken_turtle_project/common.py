@@ -119,3 +119,27 @@ def graceful_main(logger):
 
 def get_repo(project_root):
     return git.Repo(str(project_root))
+
+def parse_requirements_file(path):
+    '''
+    Parse requirements.txt or requirements.in file, discarding any comments.
+    
+    Note: requirements-parser 0.1.0 does not support -e lines it seems, hence this ad-hoc parser
+    
+    Parameters
+    ----------
+    path : pathlib.Path
+        path to requirements file
+        
+    Returns
+    -------
+    Generator that yields (editable : bool, dependency : str)
+    '''
+    with path.open('r') as f:
+        # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
+        for line in f.readlines():
+            match = re.match('^\s*(-e\s+)?([^#\s-][^#]*)', line)
+            if match:
+                yield (bool(match.group(1)), match.group(2).strip())
+            
+    
