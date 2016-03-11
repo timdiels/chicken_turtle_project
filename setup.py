@@ -36,7 +36,6 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
-    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v1.0.0.tar.gz',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
@@ -112,6 +111,14 @@ setup(
                         'install and test dependencies in blocks with comment headers for\n'
                         'example.\n'
                         '\n'
+                        "Some dependencies don't list their dependencies correctly,\n"
+                        '``pip install scikit-learn`` fails with when scipy is not installed\n'
+                        'instead of simply installing scipy first. install without scipy\n'
+                        'installed. To get around such issues, add its dependencies to\n'
+                        '``requirements.in`` before the misbehaving dependency. When ``X``\n'
+                        'appears before ``Y`` in ``requirements.in`` it will be installed before\n'
+                        '``Y`` (unless ``Y`` is a dependency of ``X``).\n'
+                        '\n'
                         'Testing\n'
                         '~~~~~~~\n'
                         '\n'
@@ -159,6 +166,24 @@ setup(
                         'a new database structure, include a Python script and call it from the\n'
                         'shell script after having made the venv.\n'
                         '\n'
+                        'Project decisions\n'
+                        '-----------------\n'
+                        '\n'
+                        'Git stashing is not user-friendly and should not be relied upon.\n'
+                        'Stashing only certain files or hunks can be done with ``git stash -p``\n'
+                        "but that doesn't work for new files. ``git add`` and ``git add -i`` are\n"
+                        'much friendlier. Other unfinished changes can be left behind on a\n'
+                        'separate branch. (See also: `stack overflow\n'
+                        'thread '
+                        '<http://stackoverflow.com/questions/3040833/stash-only-one-file-out-of-multiple-files-that-have-changed-with-git>`__\n'
+                        'and this `blog\n'
+                        'post '
+                        '<https://codingkilledthecat.wordpress.com/2012/04/27/git-stash-pop-considered-harmful/>`__)\n'
+                        '\n'
+                        'By consequence we must allow committing only part of the working\n'
+                        'directory. We can still require a clean directory before release\n'
+                        'however.\n'
+                        '\n'
                         'See also\n'
                         '--------\n'
                         '\n'
@@ -170,5 +195,5 @@ setup(
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '1.0.0'}
+    'version': '0.0.0'}
 )

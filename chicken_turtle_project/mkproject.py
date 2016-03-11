@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file, get_dependency_name
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -12,7 +12,6 @@ import pypandoc
 import click
 import pprint
 import os
-import re
 
 import logging
 logger = logging.getLogger(__name__)
@@ -126,7 +125,7 @@ def _main(pre_commit, project_version):
         # TODO check that source files have correct copyright header
         # TODO ensure the readme_file is mentioned in MANIFEST.in
         
-        _update_requirements_txt()
+        _update_requirements_txt(project_root)
         _update_setup_py(project, project_root, pkg_root)
         
         assert not pre_commit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)
@@ -280,9 +279,24 @@ def _ensure_deploy_local_is_executable(deploy_local_path):
         deploy_local_path.chmod(new_mode)
         git_('add', deploy_local_path)
         
-def _update_requirements_txt():
+def _update_requirements_txt(project_root):
     logger.info('Writing requirements.txt')
-    pb.local['pip-compile']('requirements.in')
+    
+    # Compile
+    pb.local['pip-compile']()
+    
+    # Reorder to match ordering in requirements.in
+    requirements_in_names = [get_dependency_name(line[1]) for line in parse_requirements_file(project_root / 'requirements.in') if line[1]]
+    requirements_txt_path = project_root / 'requirements.txt'
+    requirements_txt_lines = {get_dependency_name(line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
+    with requirements_txt_path.open('w') as f:
+        for name in requirements_in_names:  # write ordered
+            f.write(requirements_txt_lines[name] + '\n')
+        for name, line in requirements_txt_lines.items():  # write left-overs
+            if name not in requirements_in_names:
+                f.write(line + '\n')
+
+    # Stage it
     git_('add', 'requirements.txt')
 
 def _update_setup_py(project, project_root, pkg_root):
@@ -313,11 +327,13 @@ def _get_install_requires(project_root):
     # List dependencies
     logger.debug('Preparing to write setup.py')
     dependencies = []
-    for editable, dependency in parse_requirements_file(project_root / 'requirements.in'):
+    for editable, dependency, version_spec, _ in parse_requirements_file(project_root / 'requirements.in'):
+        if not dependency:
+            continue
         if editable:
             # transform editable dependency into its package name
             dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
-        dependencies.append(dependency)
+        dependencies.append(dependency + (version_spec or ''))
     return dependencies
     
 def _get_package_data(project_root, pkg_root):

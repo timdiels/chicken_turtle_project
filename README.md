@@ -44,6 +44,13 @@ There is no separate requirements file for test dependencies, install and test
 dependencies should simply be lumped together; though you can separate install and
 test dependencies in blocks with comment headers for example.
 
+Some dependencies don't list their dependencies correctly, `pip install
+scikit-learn` fails with when scipy is not installed instead of simply
+installing scipy first.  install without scipy installed. To get around such
+issues, add its dependencies to `requirements.in` before the misbehaving
+dependency. When `X` appears before `Y` in `requirements.in` it will be
+installed before `Y` (unless `Y` is a dependency of `X`).
+
 ### Testing
 
 Tests must be placed in `$project_name.test` or a sub-package thereof. By
@@ -81,6 +88,18 @@ we recommend shell scripts for simple deployments as they don't have dependencie
 (assuming you only deploy to unix-like machines). If you need to do more
 complex work such as migrating data to a new database structure, include a
 Python script and call it from the shell script after having made the venv.
+
+## Project decisions
+
+Git stashing is not user-friendly and should not be relied upon. Stashing only
+certain files or hunks can be done with `git stash -p` but that doesn't work
+for new files. `git add` and `git add -i` are much friendlier. Other unfinished
+changes can be left behind on a separate branch. (See also: 
+[stack overflow thread](http://stackoverflow.com/questions/3040833/stash-only-one-file-out-of-multiple-files-that-have-changed-with-git)
+and this [blog post](https://codingkilledthecat.wordpress.com/2012/04/27/git-stash-pop-considered-harmful/))
+
+By consequence we must allow committing only part of the working directory. We
+can still require a clean directory before release however.
 
 ## See also
 

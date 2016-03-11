@@ -82,9 +82,9 @@ def main(project_version):
             raise UserException('Cancelled')
         
         # If requirements.txt contains -e, abort
-        for editable, dependency in parse_requirements_file(project_root / 'requirements.in'):
-            if editable:
-                raise UserException('No editable requirements (-e) allowed for release: See "{}" in requirements.in.'.format(dependency))
+        for line in parse_requirements_file(project_root / 'requirements.in'):
+            if line[0]:
+                raise UserException('No editable requirements (-e) allowed for release: requirements.in: {}'.format(line[-1]))
         
         # Check origin is configured correctly
         logger.info('Validating git remote')

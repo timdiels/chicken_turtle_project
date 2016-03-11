@@ -21,6 +21,8 @@ from chicken_turtle_util.exceptions import UserException, log_exception
 import git
 import sys
 import re
+from urllib.parse import urlparse
+from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -122,7 +124,7 @@ def get_repo(project_root):
 
 def parse_requirements_file(path):
     '''
-    Parse requirements.txt or requirements.in file, discarding any comments.
+    Parse requirements.txt or requirements.in file
     
     Note: requirements-parser 0.1.0 does not support -e lines it seems, hence this ad-hoc parser
     
@@ -133,13 +135,30 @@ def parse_requirements_file(path):
         
     Returns
     -------
-    Generator that yields (editable : bool, dependency : str)
+    Generator that yields (editable : bool, dependency_url : str, version_spec : str, raw line : str)
     '''
+    # XXX return namedtuple instead
     with path.open('r') as f:
         # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
         for line in f.readlines():
-            match = re.match('^\s*(-e\s+)?([^#\s-][^#]*)', line)
+            match = re.fullmatch('\s*(-e\s)?\s*(([^#\s=<>]+)\s*([=<>]\s*[^\s#]+)?)?\s*(#.*)?', line.rstrip())
             if match:
-                yield (bool(match.group(1)), match.group(2).strip())
-            
+                yield (bool(match.group(1)), match.group(3), match.group(4), match.group(0))
+                
+def path_stem_deep(path):
+    '''path name without any suffixes'''
+    i = path.name.find('.')
+    if i>=0:
+        return path.name[:i]
+    else:
+        return path.name
+    
+def get_url_name(url):
+    assert url
+    result = urlparse(url)
+    return path_stem_deep(Path(result.netloc + '/' + result.path))
+
+def get_dependency_name(url):
+    return get_url_name(url).replace('_', '-')
+
     

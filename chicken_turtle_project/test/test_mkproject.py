@@ -10,7 +10,7 @@ from chicken_turtle_project.test.common import (
     pkg_init1, write_complex_requirements_in
 )
 from contextlib import ExitStack
-from chicken_turtle_project.common import eval_file
+from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name
 from pathlib import Path
 from configparser import ConfigParser
 import plumbum as pb
@@ -58,7 +58,18 @@ def create_precommit_project():
     Path('operation_mittens/test').mkdir()
     write_file('operation_mittens/test/test_one.py', test_one1)
     git_('init')
+
+def is_subsequence(left, right):
+    '''
+    Get whether left is a subsequence of right, in the mathematical sense
     
+    Subsequence definition: https://en.wikipedia.org/wiki/Subsequence
+    '''
+    right = right[:]
+    for i in reversed(range(len(right))):
+        if right[i] not in left:
+            del right[i]
+    return left == right 
     
 ## tests ############################################
 
@@ -215,7 +226,7 @@ def test_updates(tmpcwd):
     assert config['pytest']['testpaths'] == 'operation_mittens/test'  # overwritten
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
-
+    
 def test_setup_py(tmpcwd):
     '''
     - install_requires: requirements.in transformed into valid dependency list with version specs maintained
@@ -266,6 +277,16 @@ def test_setup_py(tmpcwd):
     assert setup_args['version'] == '0.0.0'
     assert 'download_url' not in setup_args
     
+    # requirements.txt must contain relevant packages
+    requirements_txt_content = read_file('requirements.txt')
+    for name in ('pytest', 'pytest-xdist', 'pytest-env', 'pkg_magic', 'pytest-cov'):
+        assert name in requirements_txt_content
+         
+    # Ordering in requirements.* files must be maintained
+    deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.in')) if line[1]]
+    deps_txt = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
+    assert is_subsequence(deps_in, deps_txt)
+    
 def test_precommit_invalid(tmpcwd):
     '''
     Invalid project cancels the commit
@@ -296,6 +317,10 @@ def test_precommit_include_changes(tmpcwd):
             
 '''
 TODO
+
+Allow committing with failing tests, but ask to confirm. This is to allow committing
+
+Name may use dashes, but not _ or whitespace! Package name should still be underscores though! (we use projec['name'] directly expecting underscores, be very careful
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
