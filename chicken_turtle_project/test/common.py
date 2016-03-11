@@ -16,7 +16,7 @@ mkproject = pb.local['ct-mkproject']
 git_ = pb.local['git']
 
 project_defaults = dict(
-    name='operation_mittens',
+    name='operation-mittens',
     description='Short description',
     author='your name',
     author_email='your_email@example.com',

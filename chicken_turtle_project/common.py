@@ -91,8 +91,8 @@ def get_project(project_root):
                 raise UserException('Attribute `{}` may not be empty or whitespace'.format(attr))
         
     # Validate project name
-    if re.search('[\s-]', project['name']):
-        raise UserException('Attribute `name` may not contain whitespace or dashes (use underscores)')
+    if re.search('[\s_]', project['name']):
+        raise UserException('Attribute `name` may not contain whitespace or underscores (use dashes)')
     
     # Validate readme_file
     if not re.fullmatch('(.*/)?README.[a-z0-9]+', project['readme_file']):
@@ -161,4 +161,7 @@ def get_url_name(url):
 def get_dependency_name(url):
     return get_url_name(url).replace('_', '-')
 
+def get_pkg_root(project_root, project_name):
+    return project_root / project_name.replace('-', '_')
+    
     

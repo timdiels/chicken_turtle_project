@@ -1,5 +1,5 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file, get_dependency_name
+from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file, get_dependency_name, get_pkg_root
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -94,7 +94,7 @@ def _main(pre_commit, project_version):
         _ensure_project_exists(project_root)
         
         project = get_project(project_root)
-        pkg_root = project_root / project['name']
+        pkg_root = get_pkg_root(project_root, project['name'])
         project['version'] = project_version
         
         _ensure_root_package_exists(pkg_root)
@@ -108,7 +108,7 @@ def _main(pre_commit, project_version):
         
         setup_cfg_path = project_root / 'setup.cfg'
         _ensure_setup_cfg_exists(setup_cfg_path)
-        _update_setup_cfg(setup_cfg_path, project)
+        _update_setup_cfg(setup_cfg_path, project, project_root)
         
         gitignore_path = project_root / '.gitignore'
         _ensure_gitignore_exists(gitignore_path)
@@ -137,7 +137,7 @@ def _ensure_project_exists(project_root):
         project_name = click.prompt('Please pick a name for your project')
         assert project_name and project_name.strip()
         with project_path.open('w') as f:
-            f.write(project_template.format(name=project_name))
+            f.write(project_template.format(name=project_name, pkg_name=get_pkg_root(project_root, project_name).name))
 
 def _ensure_root_package_exists(pkg_root):
     # Create package dir if missing
@@ -201,7 +201,7 @@ def _ensure_setup_cfg_exists(setup_cfg_path):
         setup_cfg_path.touch()
         git_('add', setup_cfg_path)
         
-def _update_setup_cfg(setup_cfg_path, project):
+def _update_setup_cfg(setup_cfg_path, project, project_root):
     # Ensure sections exist
     config = ConfigParser()
     config.read(str(setup_cfg_path))
@@ -215,7 +215,7 @@ def _update_setup_cfg(setup_cfg_path, project):
         config['pytest']['addopts'] = '--basetemp=last_test_runs --maxfail=1'
         changed = True
     
-    test_paths = '{}/test'.format(project['name'])
+    test_paths = '{}/test'.format(get_pkg_root(project_root, project['name']).name)
     if 'testpaths' not in config['pytest'] or config['pytest']['testpaths'] != test_paths:
         config['pytest']['testpaths'] = test_paths
         changed = True
@@ -424,7 +424,7 @@ project = dict(
     # Auto generate entry points
     entry_points={{
         'console_scripts': [
-            'mycli = {name}.main:main', # just an example, any module will do, this template doesn't care where you put it
+            'mycli = {pkg_name}.main:main', # just an example, any module will do, this template doesn't care where you put it
         ],
     }},
 )

@@ -134,7 +134,7 @@ def test_project_has_unknown_attr(tmpcwd, unknown_attr):
         
 _parameters = set(itertools.product(project1.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
 _parameters.add(('name', 'white space'))
-_parameters.add(('name', 'dashed-name'))
+_parameters.add(('name', 'underscore_name'))
 
 @pytest.mark.parametrize('attr,value', _parameters)
 def test_project_attr_has_invalid_value(tmpcwd, attr, value):
@@ -317,10 +317,6 @@ def test_precommit_include_changes(tmpcwd):
             
 '''
 TODO
-
-Allow committing with failing tests, but ask to confirm. This is to allow committing
-
-Name may use dashes, but not _ or whitespace! Package name should still be underscores though! (we use projec['name'] directly expecting underscores, be very careful
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 

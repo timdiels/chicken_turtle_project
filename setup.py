@@ -191,7 +191,7 @@ setup(
                         '\n'
                         '-  https://packaging.python.org/en/latest/distributing.html\n'
                         '-  https://github.com/pypa/sampleproject\n',
-    'name': 'chicken_turtle_project',
+    'name': 'chicken-turtle-project',
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
