@@ -21,16 +21,14 @@ def _main():
         logger.warning('{} not found, falling back to {}'.format(desired_python, python.executable))
         
     # Create or update venv
-    
     project_root = Path.cwd()
     with pb.local.cwd(project_root):
-        # TODO first rm venv if --clean is supplied
         if not Path('venv').exists():
             logger.info('Creating venv')
             python('-m', 'venv', 'venv')
         logger.info('Installing dependencies')
         pip_install = pb.local['venv/bin/pip']['install']
-        pip_install('--upgrade', 'pip', 'setuptools')
+        pip_install('--upgrade', 'pip', 'setuptools', 'wheel')
         pip_install('-r', 'requirements.txt')
         logger.info('Installing project package')
         pip_install('-e', '.') #TODO only when -e --editable is supplied to us
