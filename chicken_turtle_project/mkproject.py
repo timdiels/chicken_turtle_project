@@ -87,10 +87,6 @@ def _main(pre_commit, project_version):
         project_root = Path.cwd()
         repo = get_repo(project_root)
         
-        if pre_commit and repo.is_dirty(index=False, working_tree=True, untracked_files=True):
-            # Note: previous changes by mkproject will have been staged, so if dirty, it's caused by the user
-            raise UserException('Git repo has unstaged changes and/or untracked files. Please stage them (`git add .`), stash them (`git stash save -k -u "message"`) or add them to .gitignore.')
-        
         _ensure_project_exists(project_root)
         
         project = get_project(project_root)
@@ -114,7 +110,7 @@ def _main(pre_commit, project_version):
         _ensure_gitignore_exists(gitignore_path)
         _update_gitignore(gitignore_path)
         
-        _ensure_precommit_hook_exists(project_root)
+        _ensure_precommit_hook_exists(repo)
         
         deploy_local_path = project_root / 'deploy_local'
         _ensure_deploy_local_exists(deploy_local_path)
@@ -127,8 +123,6 @@ def _main(pre_commit, project_version):
         
         _update_requirements_txt(project_root)
         _update_setup_py(project, project_root, pkg_root)
-        
-        assert not pre_commit or not repo.is_dirty(index=False, working_tree=True, untracked_files=True)
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
@@ -137,7 +131,9 @@ def _ensure_project_exists(project_root):
         project_name = click.prompt('Please pick a name for your project')
         assert project_name and project_name.strip()
         with project_path.open('w') as f:
+            logger.info('Creating project.py')
             f.write(project_template.format(name=project_name, pkg_name=get_pkg_root(project_root, project_name).name))
+            git_('add', str(project_path))
 
 def _ensure_root_package_exists(pkg_root):
     # Create package dir if missing
@@ -256,10 +252,10 @@ def _raise_if_missing_file(project):
         if not glob(file):
             raise UserException("Missing file: {}".format(file))
     
-def _ensure_precommit_hook_exists(project_root):    
-    pre_commit_hook_path = project_root / '.git/hooks/pre-commit'
+def _ensure_precommit_hook_exists(repo):    
+    pre_commit_hook_path = Path(repo.git_dir) / 'hooks/pre-commit'
     if not pre_commit_hook_path.exists():
-        logger.info('Creating .git/hooks/pre-commit')
+        logger.info('Creating {}'.format(pre_commit_hook_path))
         with pre_commit_hook_path.open('w') as f:
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
@@ -460,34 +456,29 @@ cleanup() {
     rm -rf "$temp_dir"
 }
 
-# Update project
-ct-mkproject --pre-commit
-
 # Export last commit + staged changes
 trap cleanup EXIT
 temp_dir=`mktemp -d`
-mkdir "$temp_dir/project"
 
-
-if git rev-parse HEAD &>/dev/null  # Export last commit, if any
+if [ -n "$CT_RELEASE" ]
 then
-    git archive HEAD | tar -x -C "$temp_dir/project/"
+    # Make clean copy of working dir without staged changes
+    git archive HEAD | tar -x -C "$temp_dir"
+else
+    # Make clean copy of working dir with staged changes
+    git checkout-index -a -f --prefix="$temp_dir/"
 fi
 
-git diff --cached --binary > $temp_dir/patch  # Make patch of staged changes
-
-pushd "$temp_dir/project" &> /dev/null
 (
-    # Forget about git environment in temp dir
-    unset `env | cut -d'=' -f1 | grep -e '^GIT'`
-    
-    # Export staged changes
-    git apply ../patch &> /dev/null
-    
-    # Run tests
-    ./deploy_local
+    export GIT_DIR=`realpath $GIT_DIR`
+    export GIT_INDEX_FILE=`realpath $GIT_INDEX_FILE`
+    unset GIT_WORKING_TREE
+    pushd "$temp_dir" &> /dev/null
+    ct-mkproject --pre-commit  # Update project
+    unset `env | cut -d'=' -f1 | grep -e '^GIT'`  # Forget about git environment while testing
+    ./deploy_local  # Run tests
+    popd &> /dev/null
 )
-popd &> /dev/null
 '''.lstrip()
 
 deploy_local_template = '''
@@ -495,7 +486,7 @@ deploy_local_template = '''
 set -e
 ct-mkvenv -e   
 venv/bin/py.test
-'''
+'''.lstrip()
 # Remove git env vars
 #unset `env | cut -d'=' -f1 | grep -e '^GIT'`
 
@@ -503,4 +494,4 @@ conftest_py_template = '''
 # http://stackoverflow.com/a/30091579/1031434
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
-'''
+'''.lstrip()

@@ -5,7 +5,7 @@ ct-release tests
 from chicken_turtle_util.exceptions import UserException
 from chicken_turtle_project.test.common import (
     create_project, assert_re_search, git_, mkproject, project1, write_project, 
-    test_one1, write_file, get_setup_args, write_complex_requirements_in
+    test_one1, write_file, get_setup_args, write_complex_requirements_in, test_fail1
 )
 from chicken_turtle_project.release import main as release_
 from pathlib import Path
@@ -74,14 +74,36 @@ def create_release_project(test_index=True):
 
 ## tests ##########################
 
-def test_dirty(tmpcwd, capsys):
+@pytest.mark.current
+def test_ignore_staged(tmpcwd):
     '''
-    When working directory is dirty, error
+    When working directory is dirty, ignore staged changes
     '''
-    create_project()  # leaves behind untracked files    
+    create_release_project()
+    write_file(Path('project.py'), '')  # Invalid project.py
+    git_('add', 'project.py')
     result = release('--project-version', '1.0.0')
-    assert result.exit_code != 0
-    assert_re_search('(?i)error.+(dirty|clean)', result.output)
+    print(result.output)
+    assert result.exit_code == 0
+    
+def test_ignore_untracked(tmpcwd):
+    '''
+    When working directory is dirty, ignore untracked files
+    '''
+    create_release_project()
+    write_file(Path('operation_mittens/test/test_fail.py'), test_fail1)
+    result = release('--project-version', '1.0.0')
+    assert result.exit_code == 0
+
+def test_ignore_unstaged(tmpcwd):
+    '''
+    When working directory is dirty, ignore unstaged changes
+    '''
+    create_release_project()
+    write_file(Path('project.py'), '')  # Invalid project.py
+    result = release('--project-version', '1.0.0')
+    print(result.output)
+    assert result.exit_code == 0
 
 def test_happy_days(tmpcwd, mocked_release):
     '''
@@ -89,6 +111,7 @@ def test_happy_days(tmpcwd, mocked_release):
     '''
     create_release_project()
     result = release('--project-version', '1.0.0')
+    git_('reset', '--hard')
     assert result.exit_code == 0
     assert mocked_release.call_args_list == [(('pypitest',),), (('pypi',),)]
     assert git_('tag').strip() == 'v1.0.0'
@@ -105,7 +128,7 @@ def test_no_test_index(tmpcwd, mocked_release):
     assert result.exit_code == 0
     assert mocked_release.call_args_list == [(('pypi',),)]
 
-def test_no_reuse_versions(tmpcwd, capsys):
+def test_no_reuse_versions(tmpcwd):
     '''
     When previously used version is specified, fail gracefully
     '''
@@ -160,7 +183,7 @@ def test_older_than_other_branch(tmpcwd):
     assert 'less than' not in result.output
     assert 'Do you want to' not in result.output
 
-def test_editable_requirements(tmpcwd, capsys):
+def test_editable_requirements(tmpcwd):
     '''
     When requirements.txt contains editable dependencies (-e), error
     '''

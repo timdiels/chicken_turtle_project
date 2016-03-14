@@ -7,7 +7,7 @@ from chicken_turtle_project.test.common import (
     git_, requirements_in1, license_txt1, readme1, test_one1, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
     read_file, gitignore1, get_setup_args, files_create_project,
-    pkg_init1, write_complex_requirements_in
+    pkg_init1, write_complex_requirements_in, test_fail1
 )
 from contextlib import ExitStack
 from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name
@@ -32,7 +32,7 @@ file_permissions = {
     Path('setup.py') : 'overwrite',
     Path('LICENSE.txt') : 'none',
     Path('README.md') : 'none'
-}
+} 
 '''
 Maps regular files to their write permission.
 
@@ -297,6 +297,26 @@ def test_precommit_invalid(tmpcwd):
     git_('add', '.')
     with assert_process_fails(stderr_matches='(?i)error'):
         git_('commit', '-m', 'message')  # runs the hook
+        
+def test_precommit_ignore_unstaged(tmpcwd):
+    '''
+    Pre-commit must ignore unstaged changes
+    '''
+    create_precommit_project()
+    git_('add', '.')
+    mkproject()  # install pre-commit hook
+    remove_file(Path('README.md'))
+    git_('commit', '-m', 'message')  # This fails if unstaged change is included
+    
+def test_precommit_ignore_untracked(tmpcwd):
+    '''
+    Pre-commit must ignore untracked changes
+    '''
+    create_precommit_project()
+    git_('add', '.')
+    mkproject()  # install pre-commit hook
+    write_file(Path('operation_mittens/test/test_fail.py'), test_fail1)
+    git_('commit', '-m', 'message')  # This fails if the untracked test is included
      
 def test_precommit_include_changes(tmpcwd):
     '''
@@ -308,12 +328,9 @@ def test_precommit_include_changes(tmpcwd):
     git_('add', '.')
     git_('commit', '-m', 'message')  # runs the hook, which calls ct-mkproject, which changes setup.py in this case
     
-    # Expected change happened
+    # Expected change happened and is part of the commit
+    git_('reset', '--hard')
     assert get_setup_args()['install_requires'] == ['pytest']
-    
-    # And all has been committed
-    repo = git.Repo('.')
-    assert not repo.is_dirty(untracked_files=True)
             
 '''
 TODO

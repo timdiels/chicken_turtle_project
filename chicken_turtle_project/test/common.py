@@ -82,7 +82,7 @@ project1.update(
 gitignore1 = 'pattern1\npattern2'
 pkg_init1 = '# pkg init'
 test_init1 = '# test init'
-requirements_in1 = 'checksumdir'
+requirements_in1 = 'pytest\nchecksumdir'
 deploy_local1 = '#!/bin/sh\necho "deploy"'
 license_txt1 = 'license'
 readme1 = 'readme'
@@ -105,6 +105,11 @@ conftest_py1 = '''
 test_one1 = '''
 def test_one():
     pass
+'''
+
+test_fail1 = '''
+def test_fail():
+    assert False
 '''
 
 ## util ######################

@@ -10,10 +10,10 @@ pytest==2.9.0
 pytest-xdist==1.14
 pytest-env==0.6.0
 pytest-mock==0.11.0
-py==1.4.31                # via pytest, pytest-xdist
-six==1.10.0               # via pip-tools
-apipkg==1.4               # via execnet
-smmap==0.9.0              # via gitdb
 first==2.0.1              # via pip-tools
 gitdb==0.6.4              # via gitpython
 execnet==1.4.1            # via pytest-xdist
+smmap==0.9.0              # via gitdb
+six==1.10.0               # via pip-tools
+py==1.4.31                # via pytest, pytest-xdist
+apipkg==1.4               # via execnet

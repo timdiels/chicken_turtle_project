@@ -18,11 +18,12 @@
 from signal import signal, SIGPIPE, SIG_DFL
 from contextlib import contextmanager
 from chicken_turtle_util.exceptions import UserException, log_exception
+from urllib.parse import urlparse
+from pathlib import Path
+import plumbum as pb
 import git
 import sys
 import re
-from urllib.parse import urlparse
-from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ def graceful_main(logger):
         sys.exit(2)
 
 def get_repo(project_root):
-    return git.Repo(str(project_root))
+    return git.Repo(pb.local.env.get('GIT_DIR', str(project_root)))
 
 def parse_requirements_file(path):
     '''

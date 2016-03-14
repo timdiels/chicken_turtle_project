@@ -23,6 +23,7 @@ from functools import partial
 from pathlib import Path
 import plumbum as pb
 from plumbum.commands import ProcessExecutionError
+from tempfile import TemporaryDirectory
 import logging
 import versio.version
 import versio.version_scheme
@@ -42,110 +43,125 @@ Version.__name__ = 'Version'
 @click.version_option(version=__version__)
 def main(project_version):
     '''
-    Release the project to your configured test (optional) and production index
+    Release the project to your configured test (optional) and production index.
     
     Must be run in the project root.
+    
+    Any staged/unstaged changes and untracked files will be ignored. If you do 
+    want these, commit them first.
     '''
     init_logging()
     with graceful_main(logger):
         # Note: The pre-commit hook already does most of the project validation
-        project_root = Path.cwd()
-        repo = get_repo(project_root)
-        project = get_project(project_root)
-        version_tag = 'v{}'.format(project_version)
+        repo = get_repo(Path.cwd())
         
-        # Working directory must be clean (no untracked/modified files)
-        if repo.is_dirty(untracked_files=True):
-            raise UserException('Git repo is not clean, please stash or commit all untracked files and changes')
-        
-        # Disallow reuse of previous versions
-        for tag in repo.tags:
-            try:
-                if _version_from_tag(tag) == project_version:
-                    raise UserException('This version has been released before')
-            except ValueError:
-                pass
-        
-        # Get newest ancestor version
-        ancestors = list(repo.commit().iter_parents())
-        versions = []
-        for tag in repo.tags:
-            if tag.commit in ancestors:
-                try:
-                    versions.append(_version_from_tag(tag))
-                except AttributeError:
-                    pass
-        newest_ancestor_version = max(versions, default=Version('0.0.0'))
-                
-        # If version is less than that of an ancestor commit, ask to continue
-        if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit ({}). Do you want to release anyway?'.format(newest_ancestor_version)):
-            raise UserException('Cancelled')
-        
-        # If requirements.txt contains -e, abort
-        for line in parse_requirements_file(project_root / 'requirements.in'):
-            if line[0]:
-                raise UserException('No editable requirements (-e) allowed for release: requirements.in: {}'.format(line[-1]))
-        
-        # Check origin is configured correctly
-        logger.info('Validating git remote')
-        try:
-            git_('ls-remote', 'origin')
-        except ProcessExecutionError as ex:
-            raise UserException('Cannot access remote: origin') from ex
-        
-        # Validation done, release
-        with pb.local.env(CT_PROJECT_VERSION=str(project_version)):
-            released = False  # whether we have released anything of current version yet
-            committed = False
-            tag_created = False
+        logger.info('Entering clean copy of working tree')
+        with TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
             
-            try:
-                # Prepare release
-                logger.info('Preparing to commit versioned project')
-                pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
-                
-                logger.info('Committing')
-                git_['commit', '-m', 'Release {}'.format(version_tag)] & pb.FG
-                committed = True
-                
-                logger.info('Tagging commit as "{}"'.format(version_tag))
-                git_('tag', version_tag)
-                tag_created = True
+            # Export clean working tree
+            (git_['archive', 'HEAD'] | pb.local['tar']['-x', '-C', temp_dir])()
+        
+            # Enter tree and get to work
+            with pb.local.cwd(temp_dir):
+                with pb.local.env(GIT_DIR=repo.git_dir):
+                    validate(repo, temp_dir_path, project_version)
+                    _release_all(temp_dir_path, project_version)
 
-                # Release                     
-                try:
-                    # to test index (if any)
-                    if 'index_test' in project:
-                        _release(project['index_test'])
-                        released=True
-                
-                    # to production index
-                    _release(project['index_production'])
-                    released=True
-                except ReleaseError as ex:
-                    if ex.partial:
-                        released=True
-                    raise
-            
-                # Push
-                try:
-                    logger.info('Pushing commits to remote')
-                    git_('push')
-                     
-                    logger.info('Pushing tag to remote')
-                    git_('push', 'origin', version_tag)
-                except:
-                    logger.error('Failed to push. Run the following once the issue is resolved to complete the release: git push && git push origin v{}'.format(project_version))
-                    raise
-            except:
-                if not released:
-                    logger.warning('Something went wrong, but nothing was released, rolling back')
-                    if committed:
-                        git_('reset', '--hard', 'HEAD^')
-                    if tag_created:
-                        git_('tag', '-d', version_tag)
-                raise
+def validate(repo, project_root, project_version):
+    # Disallow reuse of previous versions
+    for tag in repo.tags:
+        try:
+            if _version_from_tag(tag) == project_version:
+                raise UserException('This version has been released before')
+        except ValueError:
+            pass
     
+    # Get newest ancestor version
+    ancestors = list(repo.commit().iter_parents())
+    versions = []
+    for tag in repo.tags:
+        if tag.commit in ancestors:
+            try:
+                versions.append(_version_from_tag(tag))
+            except AttributeError:
+                pass
+    newest_ancestor_version = max(versions, default=Version('0.0.0'))
+            
+    # If version is less than that of an ancestor commit, ask to continue
+    if project_version < newest_ancestor_version and not click.confirm('Given version is less than that of an ancestor commit ({}). Do you want to release anyway?'.format(newest_ancestor_version)):
+        raise UserException('Cancelled')
+    
+    # If requirements.txt contains -e, abort
+    for line in parse_requirements_file(project_root / 'requirements.in'):
+        if line[0]:
+            raise UserException('No editable requirements (-e) allowed for release: requirements.in: {}'.format(line[-1]))
+    
+    # Check origin is configured correctly
+    logger.info('Validating git remote')
+    try:
+        git_('ls-remote', 'origin')
+    except ProcessExecutionError as ex:
+        raise UserException('Cannot access remote: origin: ' + ex.stderr) from ex
+    
+def _release_all(project_root, project_version):
+    project = get_project(project_root)
+    version_tag = 'v{}'.format(project_version)
+        
+    with pb.local.env(CT_PROJECT_VERSION=str(project_version), CT_RELEASE='true'):
+        released = False  # whether we have released anything of current version yet
+        committed = False
+        tag_created = False
+        
+        try:
+            # Prepare release
+            logger.info('Preparing to commit versioned project')
+            pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
+            
+            logger.info('Committing')
+            git_['commit', '-m', 'Release {}'.format(version_tag)] & pb.FG
+            committed = True
+             
+            get_repo(project_root).is_dirty(untracked_files=True)
+            
+            logger.info('Tagging commit as "{}"'.format(version_tag))
+            git_('tag', version_tag)
+            tag_created = True
+
+            # Release
+            try:
+                # to test index (if any)
+                if 'index_test' in project:
+                    _release(project['index_test'])
+                    released=True
+            
+                # to production index
+                _release(project['index_production'])
+                released=True
+            except ReleaseError as ex:
+                if ex.partial:
+                    released=True
+                raise
+        
+            # Push
+            try:
+                logger.info('Pushing commits to remote')
+                git_('push')
+                 
+                logger.info('Pushing tag to remote')
+                git_('push', 'origin', version_tag)
+            except:
+                logger.error('Failed to push. Run the following once the issue is resolved to complete the release: git push && git push origin v{}'.format(project_version))
+                raise
+        except:
+            if not released:
+                logger.warning('Something went wrong, but nothing was released, rolling back')
+                if committed:
+                    git_('reset', '--hard', 'HEAD^')
+                if tag_created:
+                    git_('tag', '-d', version_tag)
+            raise
+
 def _version_from_tag(tag):
     '''
     Get version from version tag
