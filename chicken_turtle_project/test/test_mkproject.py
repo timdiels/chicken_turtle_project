@@ -322,4 +322,3 @@ When source file lacks copyright header or header is incorrect, error (and point
 
 Ensure the readme_file is mentioned in MANIFEST.in 
 '''
-    
