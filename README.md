@@ -57,10 +57,8 @@ appears before `Y` in `requirements.in` it will be installed before `Y` (unless
 
 ### Testing
 
-Tests must be placed in `$project_name.test` or a sub-package thereof. By
-default, tests are run with py.test from the project root from within a `venv`.
-To change this behaviour, edit `./deploy_local`. To run the tests, call
-`./deploy_local`.
+Tests must be placed in `$project_name.test` or a sub-package thereof. Tests are
+run with py.test from the project root from within a `venv`.
 
 ### Releasing to Python indices
 

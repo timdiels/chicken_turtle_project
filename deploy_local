@@ -1,6 +1,0 @@
-
-#!/bin/sh
-set -e
-unset CT_PROJECT_VERSION
-ct-mkvenv -e
-venv/bin/py.test

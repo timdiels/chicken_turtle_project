@@ -26,7 +26,6 @@ file_permissions = {
     Path('operation_mittens/test/conftest.py') : 'create',
     Path('requirements.in') : 'create',
     Path('requirements.txt') : 'overwrite',
-    Path('deploy_local') : 'create',
     Path('.gitignore') : 'update',
     Path('setup.cfg') : 'update',
     Path('setup.py') : 'overwrite',
@@ -227,7 +226,6 @@ def test_updates(tmpcwd):
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
     
-@pytest.mark.current
 def test_setup_py(tmpcwd):
     '''
     - install_requires: requirements.in transformed into valid dependency list with version specs maintained
@@ -339,8 +337,6 @@ def test_precommit_include_changes(tmpcwd):
             
 '''
 TODO
-
-rm deploy_local
 
 setup.cfg: [pytest][env] = PYTHONHASHSEED=0
 

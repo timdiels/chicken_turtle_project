@@ -83,7 +83,6 @@ gitignore1 = 'pattern1\npattern2'
 pkg_init1 = '# pkg init'
 test_init1 = '# test init'
 requirements_in1 = 'pytest\nchecksumdir'
-deploy_local1 = '#!/bin/sh\necho "deploy"'
 license_txt1 = 'license'
 readme1 = 'readme'
 setup_cfg1 = '''
@@ -178,7 +177,6 @@ def create_project():
     write_file(path / '__init__.py', test_init1)
     write_file(path / 'conftest.py', conftest_py1)
     write_file('requirements.in', requirements_in1)
-    write_file('deploy_local', deploy_local1)
     write_file('.gitignore', gitignore1)
     write_file('LICENSE.txt', license_txt1)
     write_file('setup.cfg', setup_cfg1)
@@ -186,7 +184,7 @@ def create_project():
     write_file('README.md', readme1)
     git_('init')
     
-files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in deploy_local .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
+files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
 '''files created by create_project'''
 
 def write_project(project):

@@ -99,7 +99,6 @@ def _main(pre_commit, project_version):
     - $project_name/test package
     - $project_name/test/conftest.py
     - requirements.in
-    - deploy_local
     
     The following files may be created or updated by merging in changes:
     - $project_name/__init__.py
@@ -122,13 +121,13 @@ def _main(pre_commit, project_version):
     install dependencies as editable, prefix them with -e and provide a path to
     the package.
     
-    A git pre-commit hook will be installed (if none exists) to call
-    $project_root/deploy_local before each commit. deploy_local can be any
-    executable, it is auto generated for you if missing, but is left alone
-    otherwise so you can provide your own. Its purpose is to call `ct-
-    mkproject`, install editably the current project and ensure tests succeed.
+    A git pre-commit hook will be installed (if none exists). It updates project
+    files and ensures the tests succeed before committing.
     
-    Any file modified by ct-mkproject, is automatically staged (git).
+    Any file modified by ct-mkproject, is automatically staged (git). Some files
+    will be dirty after the commit (e.g. setup.py) due to implementation
+    limitations, as these files are managed by ct-mkproject, there should be no
+    need to `git reset --hard` them.
     '''
     init_logging()
     with graceful_main(logger):
@@ -159,10 +158,6 @@ def _main(pre_commit, project_version):
         _update_gitignore(gitignore_path)
         
         _ensure_precommit_hook_exists(repo)
-        
-        deploy_local_path = project_root / 'deploy_local'
-        _ensure_deploy_local_exists(deploy_local_path)
-        _ensure_deploy_local_is_executable(deploy_local_path)
         
         _raise_if_missing_file(project)
         
@@ -307,21 +302,6 @@ def _ensure_precommit_hook_exists(repo):
         with pre_commit_hook_path.open('w') as f:
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
-
-def _ensure_deploy_local_exists(deploy_local_path):        
-    if not deploy_local_path.exists():
-        logger.info('Creating deploy_local')
-        with deploy_local_path.open('w') as f:
-            f.write(deploy_local_template)
-        git_('add', deploy_local_path)
-
-def _ensure_deploy_local_is_executable(deploy_local_path):            
-    stat = deploy_local_path.stat()
-    new_mode = stat.st_mode | 0o100
-    if stat.st_mode != new_mode:
-        logger.info('Setting mode u+x on deploy_local')
-        deploy_local_path.chmod(new_mode)
-        git_('add', deploy_local_path)
         
 def _get_dependency_file_paths(project_root):
     paths = [Path(x) for x in glob(str(project_root / '*requirements.in'))]
@@ -546,20 +526,16 @@ fi
     unset GIT_WORKING_TREE
     pushd "$temp_dir" &> /dev/null
     ct-mkproject --pre-commit  # Update project
-    unset `env | cut -d'=' -f1 | grep -e '^GIT'`  # Forget about git environment while testing
-    ./deploy_local  # Run tests
+    
+    # Run tests
+    unset `env | cut -d'=' -f1 | grep -e '^GIT_'`  # Forget about git environment while testing
+    unset `env | cut -d'=' -f1 | grep -e '^CT_'`  # Forget about Chicken Turtle environment while testing
+    ct-mkvenv
+    venv/bin/py.test
+    
     popd &> /dev/null
 )
 '''.lstrip()
-
-deploy_local_template = '''
-#!/bin/sh
-set -e
-ct-mkvenv -e   
-venv/bin/py.test
-'''.lstrip()
-# Remove git env vars
-#unset `env | cut -d'=' -f1 | grep -e '^GIT'`
 
 conftest_py_template = '''
 # http://stackoverflow.com/a/30091579/1031434
