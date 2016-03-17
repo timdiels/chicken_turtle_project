@@ -10,9 +10,3 @@ pip-tools
 checksumdir
 versio
 networkx
-
-# testing
-pytest
-pytest-xdist
-pytest-env
-pytest-mock

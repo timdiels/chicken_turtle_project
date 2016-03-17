@@ -35,7 +35,6 @@ This module represents totally ordered sets (tosets) as `setlist`s. E.g. a toset
 from collections_extended import setlist
 from chicken_turtle_util.itertools import window 
 import networkx as nx
-import matplotlib.pyplot as plt
     
 def toset_from_tosets(*tosets):
     '''
@@ -345,7 +344,6 @@ def _update_requirements_txt(project_root):
         all_dependencies.append(setlist(dependency_names))
 
     all_dependencies = toset_from_tosets(*all_dependencies)
-    print(all_dependencies)
     with requirements_txt_path.open('w') as f:
         for name in all_dependencies:  # write ordered
             f.write(requirements_txt_lines[name] + '\n')

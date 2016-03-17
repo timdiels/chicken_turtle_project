@@ -259,7 +259,7 @@ def test_setup_py(tmpcwd):
     Path('operation_mittens/test/pkg/data/file').touch()
     
     # Run
-    mkproject & pb.FG
+    mkproject()
     
     # Assert all the things
     setup_args = get_setup_args()
@@ -340,14 +340,16 @@ def test_precommit_include_changes(tmpcwd):
 '''
 TODO
 
-1. optional requirements
-2. rm deploy_local
+rm deploy_local
+
+setup.cfg: [pytest][env] = PYTHONHASHSEED=0
+
+test_requirements.in should exist and contain at least these:
+pytest
+pytest-xdist
+pytest-env 
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
 Ensure the readme_file is mentioned in MANIFEST.in
-
-test_requirements.in should exist and contain at least as that's what setup.cfg demands:
-pytest
-pytest-xdist 
 '''
