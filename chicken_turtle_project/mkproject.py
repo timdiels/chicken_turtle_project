@@ -99,6 +99,7 @@ def _main(pre_commit, project_version):
     - $project_name/test package
     - $project_name/test/conftest.py
     - requirements.in
+    - test_requirements.in
     
     The following files may be created or updated by merging in changes:
     - $project_name/__init__.py
@@ -148,6 +149,7 @@ def _main(pre_commit, project_version):
         _ensure_conftest_exists(test_root)
         
         _ensure_requirements_in_exists(project_root)
+        _ensure_test_requirements_in_exists(project_root)
         
         setup_cfg_path = project_root / 'setup.cfg'
         _ensure_setup_cfg_exists(setup_cfg_path)
@@ -233,6 +235,13 @@ def _ensure_requirements_in_exists(project_root):
     if not requirements_in_path.exists():
         logger.info('Creating requirements.in')
         requirements_in_path.touch()
+
+def _ensure_test_requirements_in_exists(project_root):
+    requirements_in_path = project_root / 'test_requirements.in'
+    if not requirements_in_path.exists():
+        logger.info('Creating test_requirements.in')
+        with requirements_in_path.open('w') as f:
+            f.write(test_requirements_in_template)
         
 def _ensure_setup_cfg_exists(setup_cfg_path):
     if not setup_cfg_path.exists():
@@ -541,4 +550,9 @@ conftest_py_template = '''
 # http://stackoverflow.com/a/30091579/1031434
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
+'''.lstrip()
+
+test_requirements_in_template = '''
+pytest
+pytest-xdist
 '''.lstrip()

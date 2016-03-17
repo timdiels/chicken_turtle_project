@@ -25,6 +25,7 @@ file_permissions = {
     Path('operation_mittens/test/__init__.py') : 'create',
     Path('operation_mittens/test/conftest.py') : 'create',
     Path('requirements.in') : 'create',
+    Path('test_requirements.in') : 'create',
     Path('requirements.txt') : 'overwrite',
     Path('.gitignore') : 'update',
     Path('setup.cfg') : 'update',
@@ -241,6 +242,7 @@ def test_setup_py(tmpcwd):
     write_project(project)
     write_complex_requirements_in()
     write_file('my_extra_requirements.in', 'checksumdir\npytest-pep8\n')
+    remove_file(Path('test_requirements.in'))
     
     # Create package_data in operation_mittens/test (it actually may be in non-test as well):
     Path('operation_mittens/test/data').mkdir()
@@ -257,7 +259,7 @@ def test_setup_py(tmpcwd):
     Path('operation_mittens/test/pkg/data/file').touch()
     
     # Run
-    mkproject()
+    mkproject & pb.FG
     
     # Assert all the things
     setup_args = get_setup_args()
@@ -274,8 +276,9 @@ def test_setup_py(tmpcwd):
         'operation_mittens.test.pkg' : {'operation_mittens/test/pkg/data/file'},
     }
     assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
-    assert set(setup_args['extra_requires'].keys()) == {'my_extra'}
+    assert set(setup_args['extra_requires'].keys()) == {'my_extra', 'test'}
     assert set(setup_args['extra_requires']['my_extra']) == {'checksumdir', 'pytest-pep8'}
+    assert set(setup_args['extra_requires']['test']) == {'pytest', 'pytest-xdist'}
     assert setup_args['version'] == '0.0.0'
     assert 'download_url' not in setup_args
     
@@ -286,7 +289,7 @@ def test_setup_py(tmpcwd):
          
     # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
     deps_txt = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
-    for path in map(Path, ('requirements.in', 'my_extra_requirements.in')):
+    for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
         deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(path) if line[1]]
         assert is_subsequence(deps_in, deps_txt)
     
@@ -341,9 +344,6 @@ TODO
 setup.cfg: [pytest][env] = PYTHONHASHSEED=0
 
 test_requirements.in should exist and contain at least these:
-pytest
-pytest-xdist
-pytest-env 
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
