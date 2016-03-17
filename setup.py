@@ -40,7 +40,7 @@ setup(
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'extra_requires': {'test': ['pytest', 'pytest-xdist', 'pytest-env', 'pytest-mock']},
+    'extras_require': {'test': ['pytest', 'pytest-xdist', 'pytest-env', 'pytest-mock']},
     'install_requires': [   'collections-extended',
                             'more_itertools',
                             'chicken_turtle_util==1.0.0',

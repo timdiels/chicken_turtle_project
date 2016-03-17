@@ -277,9 +277,9 @@ def test_setup_py(tmpcwd):
         'operation_mittens.test.pkg' : {'operation_mittens/test/pkg/data/file'},
     }
     assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
-    assert set(setup_args['extra_requires'].keys()) == {'my_extra', 'test'}
-    assert set(setup_args['extra_requires']['my_extra']) == {'checksumdir', 'pytest-pep8'}
-    assert set(setup_args['extra_requires']['test']) == {'pytest', 'pytest-xdist', 'pytest-env'}
+    assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test'}
+    assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
+    assert set(setup_args['extras_require']['test']) == {'pytest', 'pytest-xdist', 'pytest-env'}
     assert setup_args['version'] == '0.0.0'
     assert 'download_url' not in setup_args
     

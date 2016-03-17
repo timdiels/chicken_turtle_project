@@ -376,7 +376,7 @@ def _get_dependencies(project_root):
     '''
     Returns
     -------
-    {'install_requires': ..., 'extra_requires': ...}
+    {'install_requires': ..., 'extras_require': ...}
     '''
     paths = _get_dependency_file_paths(project_root)
     extra_requires = {}
@@ -394,7 +394,7 @@ def _get_dependencies(project_root):
         else:
             name = re.fullmatch('(.*)_requirements.in', path.name).group(1)
             extra_requires[name] = dependencies
-    return dict(install_requires=install_requires, extra_requires=extra_requires)
+    return dict(install_requires=install_requires, extras_require=extra_requires)
     
 def _get_package_data(project_root, pkg_root):
     pkg_root = pkg_root.relative_to(project_root)
