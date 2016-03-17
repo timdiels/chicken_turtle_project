@@ -134,7 +134,6 @@ def test_project_has_unknown_attr(tmpcwd, unknown_attr):
         
 _parameters = set(itertools.product(project1.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
 _parameters.add(('name', 'white space'))
-_parameters.add(('name', 'underscore_name'))
 
 @pytest.mark.parametrize('attr,value', _parameters)
 def test_project_attr_has_invalid_value(tmpcwd, attr, value):

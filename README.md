@@ -106,6 +106,11 @@ and this [blog post](https://codingkilledthecat.wordpress.com/2012/04/27/git-sta
 By consequence we must allow committing only part of the working directory. We
 can still require a clean directory before release however.
 
+Warn on a poorly formatted project name (underscores, upper case) instead of
+raising an error. The project may already have been submitted and the index 
+may not allow renaming the package (although PyPI allows it through a support
+ticket). 
+
 ## See also
 
 Python packaging recommendations:

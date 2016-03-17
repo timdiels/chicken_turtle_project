@@ -92,8 +92,12 @@ def get_project(project_root):
                 raise UserException('Attribute `{}` may not be empty or whitespace'.format(attr))
         
     # Validate project name
-    if re.search('[\s_]', project['name']):
-        raise UserException('Attribute `name` may not contain whitespace or underscores (use dashes)')
+    if re.search('\s', project['name']):
+        raise UserException('Attribute `name` may not contain whitespace, use dashes instead')
+    if re.search('_', project['name']):
+        logger.warning('Attribute `name` contains underscores, dashes are preferred')
+    if project['name'].lower() != project['name']:
+        logger.warning('Attribute `name` contains upper case characters, all lower case is preferred')
     
     # Validate readme_file
     if not re.fullmatch('(.*/)?README.[a-z0-9]+', project['readme_file']):

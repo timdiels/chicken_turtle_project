@@ -38,7 +38,7 @@ project = dict(
     ''',
     
     # standard
-    name='chicken-turtle-project',
+    name='chicken_turtle_project',
     description="Python 3 project development tools",
     author='Tim Diels',
     author_email='timdiels.m@gmail.com',

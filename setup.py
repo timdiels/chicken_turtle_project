@@ -186,6 +186,11 @@ setup(
                         'directory. We can still require a clean directory before release\n'
                         'however.\n'
                         '\n'
+                        'Warn on a poorly formatted project name (underscores, upper case)\n'
+                        'instead of raising an error. The project may already have been submitted\n'
+                        'and the index may not allow renaming the package (although PyPI allows\n'
+                        'it through a support ticket).\n'
+                        '\n'
                         'See also\n'
                         '--------\n'
                         '\n'
@@ -193,7 +198,7 @@ setup(
                         '\n'
                         '-  https://packaging.python.org/en/latest/distributing.html\n'
                         '-  https://github.com/pypa/sampleproject\n',
-    'name': 'chicken-turtle-project',
+    'name': 'chicken_turtle_project',
     'package_data': {},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
