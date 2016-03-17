@@ -1,4 +1,6 @@
 #-e ../chicken_turtle_util
+collections-extended
+more_itertools
 chicken_turtle_util==1.0.0
 click
 plumbum
@@ -7,6 +9,7 @@ GitPython
 pip-tools
 checksumdir
 versio
+networkx
 
 # testing
 pytest

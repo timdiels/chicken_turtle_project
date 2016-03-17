@@ -12,6 +12,9 @@ import pypandoc
 import click
 import pprint
 import os
+import re
+from glob import glob
+from more_itertools import first
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,6 +25,52 @@ _dummy_version = '0.0.0'
 
 def main(args=None):
     _main(args, help_option_names=['-h', '--help'])
+
+#TODO mv to CTU.ordering
+'''
+This module represents totally ordered sets (tosets) as `setlist`s. E.g. a toset
+`a < b < c` is represented as `setlist([a, b, c])`.
+'''
+
+from collections_extended import setlist
+from chicken_turtle_util.itertools import window 
+import networkx as nx
+import matplotlib.pyplot as plt
+    
+def toset_from_tosets(*tosets):
+    '''
+    Create totally ordered set (toset) from tosets.
+    
+    These tosets, when merged, form a partially ordered set. The linear
+    extension of this poset, a toset, is returned.
+    
+    Parameters
+    ----------
+    tosets : iterable of setlist
+        tosets to merge
+        
+    Raises
+    ------
+    ValueError
+        if the tosets (derived from the lists) contradict each other. E.g. `[a, b]` and `[b, c, a]` contradict each other.
+        
+    Returns
+    -------
+    setlist
+        Totally ordered set
+    '''
+    # Construct directed graph with: a <-- b iff a < b and adjacent in a list
+    graph = nx.DiGraph()
+    for toset in tosets:
+        graph.add_nodes_from(toset)
+        graph.add_edges_from(window(reversed(toset)))
+    
+    # No cycles allowed
+    if not nx.is_directed_acyclic_graph(graph):
+        raise ValueError('Given tosets contradict each other')  # each cycle is a contradiction, e.g. a > b > c > a
+    
+    # Topological sort
+    return setlist(nx.topological_sort(graph, reverse=True))    
 
 @click.command()
 @cli.option(
@@ -275,28 +324,41 @@ def _ensure_deploy_local_is_executable(deploy_local_path):
         deploy_local_path.chmod(new_mode)
         git_('add', deploy_local_path)
         
+def _get_dependency_file_paths(project_root):
+    paths = [Path(x) for x in glob(str(project_root / '*requirements.in'))]
+    assert paths
+    return paths
+
 def _update_requirements_txt(project_root):
     logger.info('Writing requirements.txt')
     
     # Compile
-    pb.local['pip-compile']()
+    input_file_paths = _get_dependency_file_paths(project_root)
+    pb.local['pip-compile'](*(list(map(str, input_file_paths)) + ['-o', 'requirements.txt']))
     
     # Reorder to match ordering in requirements.in
-    requirements_in_names = [get_dependency_name(line[1]) for line in parse_requirements_file(project_root / 'requirements.in') if line[1]]
     requirements_txt_path = project_root / 'requirements.txt'
     requirements_txt_lines = {get_dependency_name(line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
+    all_dependencies = []
+    for input_path in input_file_paths:
+        dependency_names = [get_dependency_name(line[1]) for line in parse_requirements_file(input_path) if line[1]]
+        all_dependencies.append(setlist(dependency_names))
+
+    all_dependencies = toset_from_tosets(*all_dependencies)
+    print(all_dependencies)
     with requirements_txt_path.open('w') as f:
-        for name in requirements_in_names:  # write ordered
+        for name in all_dependencies:  # write ordered
             f.write(requirements_txt_lines[name] + '\n')
         for name, line in requirements_txt_lines.items():  # write left-overs
-            if name not in requirements_in_names:
+            if name not in all_dependencies:
                 f.write(line + '\n')
 
     # Stage it
     git_('add', 'requirements.txt')
 
 def _update_setup_py(project, project_root, pkg_root):
-    project['install_requires'] = _get_install_requires(project_root) 
+    logger.debug('Preparing to write setup.py')
+    project.update(_get_dependencies(project_root))
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
     project['packages'] = find_packages()
@@ -319,18 +381,29 @@ def _update_setup_py(project, project_root, pkg_root):
         f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
     git_('add', setup_py_path)
   
-def _get_install_requires(project_root):
-    # List dependencies
-    logger.debug('Preparing to write setup.py')
-    dependencies = []
-    for editable, dependency, version_spec, _ in parse_requirements_file(project_root / 'requirements.in'):
-        if not dependency:
-            continue
-        if editable:
-            # transform editable dependency into its package name
-            dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
-        dependencies.append(dependency + (version_spec or ''))
-    return dependencies
+def _get_dependencies(project_root):
+    '''
+    Returns
+    -------
+    {'install_requires': ..., 'extra_requires': ...}
+    '''
+    paths = _get_dependency_file_paths(project_root)
+    extra_requires = {}
+    for path in paths: 
+        dependencies = []
+        for editable, dependency, version_spec, _ in parse_requirements_file(path):
+            if not dependency:
+                continue
+            if editable:
+                # transform editable dependency into its package name
+                dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
+            dependencies.append(dependency + (version_spec or ''))
+        if path.name == 'requirements.in':
+            install_requires = dependencies
+        else:
+            name = re.fullmatch('(.*)_requirements.in', path.name).group(1)
+            extra_requires[name] = dependencies
+    return dict(install_requires=install_requires, extra_requires=extra_requires)
     
 def _get_package_data(project_root, pkg_root):
     pkg_root = pkg_root.relative_to(project_root)

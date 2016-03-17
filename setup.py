@@ -40,7 +40,10 @@ setup(
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main']},
-    'install_requires': [   'chicken_turtle_util==1.0.0',
+    'extra_requires': {},
+    'install_requires': [   'collections-extended',
+                            'more_itertools',
+                            'chicken_turtle_util==1.0.0',
                             'click',
                             'plumbum',
                             'pypandoc',
@@ -48,6 +51,7 @@ setup(
                             'pip-tools',
                             'checksumdir',
                             'versio',
+                            'networkx',
                             'pytest',
                             'pytest-xdist',
                             'pytest-env',
@@ -105,21 +109,20 @@ setup(
                         'Managing dependencies\n'
                         '~~~~~~~~~~~~~~~~~~~~~\n'
                         '\n'
-                        'Dependencies should be listed in ``requirements.in``, which is an input\n'
-                        'file to ``pip-compile``\n'
-                        '(`pip-tools <https://github.com/nvie/pip-tools>`__). There is no\n'
-                        'separate requirements file for test dependencies, install and test\n'
-                        'dependencies should simply be lumped together; though you can separate\n'
-                        'install and test dependencies in blocks with comment headers for\n'
-                        'example.\n'
+                        'Required dependencies should be listed in ``requirements.in``, optional\n'
+                        'dependencies should be listed in ``${name}_requirements.in``. A\n'
+                        '``requirements.txt`` file will be generated from these files using\n'
+                        '``pip-compile`` (`pip-tools <https://github.com/nvie/pip-tools>`__),\n'
+                        'containing both required and optional dependencies. Required\n'
+                        "dependencies will appear in setuptools' ``install_requires``. Optional\n"
+                        'dependencies will appear in ``extras_require`` with ``$name`` as key,\n'
+                        "e.g. ``test_requirements.in`` corresponds to ``extras_require['test']``.\n"
                         '\n'
-                        "Some dependencies don't list their dependencies correctly,\n"
-                        '``pip install scikit-learn`` fails with when scipy is not installed\n'
-                        'instead of simply installing scipy first. install without scipy\n'
-                        'installed. To get around such issues, add its dependencies to\n'
-                        '``requirements.in`` before the misbehaving dependency. When ``X``\n'
-                        'appears before ``Y`` in ``requirements.in`` it will be installed before\n'
-                        '``Y`` (unless ``Y`` is a dependency of ``X``).\n'
+                        'If one of your dependencies fails to list its dependencies correctly,\n'
+                        'e.g. ``pip install scikit-learn`` fails when scipy is not installed, you\n'
+                        'can add its dependencies to ``requirements.in`` before the misbehaving\n'
+                        'dependency. When ``X`` appears before ``Y`` in ``requirements.in`` it\n'
+                        'will be installed before ``Y`` (unless ``Y`` is a dependency of ``X``).\n'
                         '\n'
                         'Testing\n'
                         '~~~~~~~\n'
@@ -157,6 +160,9 @@ setup(
                         'the package you want to add data to. The ``data`` directory should not\n'
                         'have a ``__init__.py`` (as direct descendant) as that would make it a\n'
                         'package instead of a data directory.\n'
+                        '\n'
+                        'You can then access this data (regardless of whether and how the project\n'
+                        'is installed) using the ``pkg_resources`` module.\n'
                         '\n'
                         'Deployment\n'
                         '~~~~~~~~~~\n'

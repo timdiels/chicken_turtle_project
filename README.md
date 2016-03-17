@@ -40,18 +40,20 @@ root package.
 
 ### Managing dependencies
 
-Dependencies should be listed in `requirements.in`, which is an input file to
-`pip-compile` ([pip-tools](https://github.com/nvie/pip-tools)).
-There is no separate requirements file for test dependencies, install and test
-dependencies should simply be lumped together; though you can separate install and
-test dependencies in blocks with comment headers for example.
+Required dependencies should be listed in `requirements.in`, optional
+dependencies should be listed in `${name}_requirements.in`. A `requirements.txt` file
+will be generated from these files using `pip-compile`
+([pip-tools](https://github.com/nvie/pip-tools)), containing both required and
+optional dependencies. Required dependencies will appear in setuptools'
+`install_requires`. Optional dependencies will appear in `extras_require` with
+`$name` as key, e.g. `test_requirements.in` corresponds to
+`extras_require['test']`.
 
-Some dependencies don't list their dependencies correctly, `pip install
-scikit-learn` fails with when scipy is not installed instead of simply
-installing scipy first.  install without scipy installed. To get around such
-issues, add its dependencies to `requirements.in` before the misbehaving
-dependency. When `X` appears before `Y` in `requirements.in` it will be
-installed before `Y` (unless `Y` is a dependency of `X`).
+If one of your dependencies fails to list its dependencies correctly, e.g. `pip
+install scikit-learn` fails when scipy is not installed, you can add its
+dependencies to `requirements.in` before the misbehaving dependency. When `X`
+appears before `Y` in `requirements.in` it will be installed before `Y` (unless
+`Y` is a dependency of `X`).
 
 ### Testing
 
@@ -82,6 +84,9 @@ Package data can be provided by placing a directory named `data` in the package
 you want to add data to. The `data` directory should not have a `__init__.py`
 (as direct descendant) as that would make it a package instead of a data
 directory.
+
+You can then access this data (regardless of whether and how the project is
+installed) using the `pkg_resources` module.
 
 ### Deployment
 
