@@ -262,6 +262,10 @@ def _update_setup_cfg(setup_cfg_path, project, project_root):
     if 'addopts' not in config['pytest']:
         config['pytest']['addopts'] = '--basetemp=last_test_runs --maxfail=1'
         changed = True
+        
+    if 'env' not in config['pytest']:
+        config['pytest']['env'] = 'PYTHONHASHSEED=0'
+        changed = True
     
     test_paths = '{}/test'.format(get_pkg_root(project_root, project['name']).name)
     if 'testpaths' not in config['pytest'] or config['pytest']['testpaths'] != test_paths:
@@ -555,4 +559,5 @@ signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
 test_requirements_in_template = '''
 pytest
 pytest-xdist
+pytest-env
 '''.lstrip()

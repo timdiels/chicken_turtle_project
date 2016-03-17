@@ -224,6 +224,7 @@ def test_updates(tmpcwd):
     config.read('setup.cfg')
     assert config['pytest']['addopts'].strip() == '--basetemp=last_test_runs --maxfail=2'  # unchanged
     assert config['pytest']['testpaths'] == 'operation_mittens/test'  # overwritten
+    assert config['pytest']['env'] == 'PYTHONHASHSEED=0'  # created (would be unchanged if present)
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
     
@@ -278,7 +279,7 @@ def test_setup_py(tmpcwd):
     assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
     assert set(setup_args['extra_requires'].keys()) == {'my_extra', 'test'}
     assert set(setup_args['extra_requires']['my_extra']) == {'checksumdir', 'pytest-pep8'}
-    assert set(setup_args['extra_requires']['test']) == {'pytest', 'pytest-xdist'}
+    assert set(setup_args['extra_requires']['test']) == {'pytest', 'pytest-xdist', 'pytest-env'}
     assert setup_args['version'] == '0.0.0'
     assert 'download_url' not in setup_args
     
@@ -340,10 +341,6 @@ def test_precommit_include_changes(tmpcwd):
             
 '''
 TODO
-
-setup.cfg: [pytest][env] = PYTHONHASHSEED=0
-
-test_requirements.in should exist and contain at least these:
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
