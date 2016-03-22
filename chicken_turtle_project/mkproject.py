@@ -552,13 +552,25 @@ fi
 (
     export GIT_DIR=`realpath $GIT_DIR`
     export GIT_INDEX_FILE=`realpath $GIT_INDEX_FILE`
+    if [ -z "$GIT_WORKING_TREE" ]
+    then
+        CT_PROJECT_ROOT="$PWD"
+    else
+        CT_PROJECT_ROOT=`realpath $GIT_WORKING_TREE`
+    fi
     unset GIT_WORKING_TREE
+    
     pushd "$temp_dir" &> /dev/null
     ct-mkproject --pre-commit  # Update project
     
     # Run tests
     unset `env | cut -d'=' -f1 | grep -e '^GIT_'`  # Forget about git environment while testing
     unset `env | cut -d'=' -f1 | grep -e '^CT_'`  # Forget about Chicken Turtle environment while testing
+    
+    if [ -d "$CT_PROJECT_ROOT/venv" ]
+    then
+        ln -s $CT_PROJECT_ROOT/venv
+    fi
     ct-mkvenv
     venv/bin/py.test
     
