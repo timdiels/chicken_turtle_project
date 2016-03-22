@@ -13,11 +13,11 @@ pip-tools==1.6
 checksumdir==1.0.5
 versio==0.3.0
 networkx==1.11
-gitdb==0.6.4              # via gitpython
-six==1.10.0               # via pip-tools
 smmap==0.9.0              # via gitdb
 apipkg==1.4               # via execnet
 decorator==4.0.9          # via networkx
-first==2.0.1              # via pip-tools
-py==1.4.31                # via pytest, pytest-xdist
+six==1.10.0               # via pip-tools
 execnet==1.4.1            # via pytest-xdist
+gitdb==0.6.4              # via gitpython
+py==1.4.31                # via pytest, pytest-xdist
+first==2.0.1              # via pip-tools

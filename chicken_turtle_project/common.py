@@ -17,10 +17,12 @@
 
 from signal import signal, SIGPIPE, SIG_DFL
 from contextlib import contextmanager
-from chicken_turtle_util.exceptions import UserException, log_exception
+from chicken_turtle_util.exceptions import UserException
 from urllib.parse import urlparse
 from pathlib import Path
+from glob import glob
 import plumbum as pb
+import shutil
 import git
 import sys
 import re
@@ -127,6 +129,12 @@ def graceful_main(logger):
 def get_repo(project_root):
     return git.Repo(pb.local.env.get('GIT_DIR', str(project_root)))
 
+def parse_requirements(lines):
+    for line in lines:
+        match = re.fullmatch('\s*(-e\s)?\s*(([^#\s=<>]+)\s*([=<>]\s*[^\s#]+)?)?\s*(#.*)?', line.rstrip())
+        if match:
+            yield (bool(match.group(1)), match.group(3), match.group(4), match.group(0))
+    
 def parse_requirements_file(path):
     '''
     Parse requirements.txt or requirements.in file
@@ -140,15 +148,13 @@ def parse_requirements_file(path):
         
     Returns
     -------
-    Generator that yields (editable : bool, dependency_url : str, version_spec : str, raw line : str)
+    Generator that yields (editable : bool, dependency_url : str, version_spec : str, whole line : str)
     '''
     # XXX return namedtuple instead
     with path.open('r') as f:
         # Ad-hoc parse each line into a dependency (requirements-parser 0.1.0 does not support -e lines it seems)
-        for line in f.readlines():
-            match = re.fullmatch('\s*(-e\s)?\s*(([^#\s=<>]+)\s*([=<>]\s*[^\s#]+)?)?\s*(#.*)?', line.rstrip())
-            if match:
-                yield (bool(match.group(1)), match.group(3), match.group(4), match.group(0))
+        for parsed in parse_requirements(f.readlines()):
+            yield parsed
                 
 def path_stem_deep(path):
     '''path name without any suffixes'''
@@ -169,4 +175,27 @@ def get_dependency_name(url):
 def get_pkg_root(project_root, project_name):
     return project_root / project_name.replace('-', '_')
     
+sip_packages = ('sip', 'pyqt5')
+'lower-case names of known SIP packages'
+
+def is_sip_dependency(name):
+    return name.lower() in sip_packages
+
+def get_dependency_file_paths(project_root):
+    paths = [Path(x) for x in glob(str(project_root / '*requirements.in'))]
+    assert paths
+    return paths
+
+def remove_file(path): #TODO move to CTU: path.remove()
+    '''
+    Remove file or directory (recursively)
     
+    Parameters
+    ----------
+    path : Path
+    '''
+    if path.is_dir():
+        shutil.rmtree(str(path))
+    else:
+        path.unlink()
+        

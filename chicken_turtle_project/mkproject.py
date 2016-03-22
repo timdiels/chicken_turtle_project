@@ -1,9 +1,12 @@
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import get_project, graceful_main, get_repo, init_logging, parse_requirements_file, get_dependency_name, get_pkg_root
+from chicken_turtle_project.common import (
+    get_project, graceful_main, get_repo, init_logging, 
+    parse_requirements_file, get_dependency_name, get_pkg_root, 
+    is_sip_dependency, get_dependency_file_paths
+)
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
-from glob import glob
 from configparser import ConfigParser
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
@@ -14,7 +17,7 @@ import pprint
 import os
 import re
 from glob import glob
-from more_itertools import first
+from tempfile import mkstemp
 
 import logging
 logger = logging.getLogger(__name__)
@@ -315,18 +318,30 @@ def _ensure_precommit_hook_exists(repo):
         with pre_commit_hook_path.open('w') as f:
             f.write(pre_commit_hook_template)
         pre_commit_hook_path.chmod(0o775)
-        
-def _get_dependency_file_paths(project_root):
-    paths = [Path(x) for x in glob(str(project_root / '*requirements.in'))]
-    assert paths
-    return paths
 
 def _update_requirements_txt(project_root):
     logger.info('Writing requirements.txt')
     
-    # Compile
-    input_file_paths = _get_dependency_file_paths(project_root)
-    pb.local['pip-compile'](*(list(map(str, input_file_paths)) + ['-o', 'requirements.txt']))
+    input_file_paths = get_dependency_file_paths(project_root)
+    regular_dependencies_fd, regular_dependencies_path = mkstemp()
+    try:
+        regular_dependencies_path = Path(regular_dependencies_path)
+        
+        # Filter out sip dependencies
+        with os.fdopen(regular_dependencies_fd, 'w') as f:
+            for input_path in input_file_paths:
+                for _, dependency, version_spec, line in parse_requirements_file(input_path):
+                    if not dependency:
+                        continue
+                    if not is_sip_dependency(dependency):
+                        f.write(line + '\n')
+                    elif not version_spec or not version_spec.startswith('=='):
+                        raise UserException("{!r} must be pinned (i.e. must have a '==version' suffix) as it's a sip dependency".format(dependency))
+        
+        # Compile requirements
+        pb.local['pip-compile'](str(regular_dependencies_path), '-o', 'requirements.txt')
+    finally:
+        regular_dependencies_path.unlink()
     
     # Reorder to match ordering in requirements.in
     requirements_txt_path = project_root / 'requirements.txt'
@@ -334,6 +349,7 @@ def _update_requirements_txt(project_root):
     all_dependencies = []
     for input_path in input_file_paths:
         dependency_names = [get_dependency_name(line[1]) for line in parse_requirements_file(input_path) if line[1]]
+        dependency_names = [name for name in dependency_names if not is_sip_dependency(name)]
         all_dependencies.append(setlist(dependency_names))
 
     all_dependencies = toset_from_tosets(*all_dependencies)
@@ -378,12 +394,12 @@ def _get_dependencies(project_root):
     -------
     {'install_requires': ..., 'extras_require': ...}
     '''
-    paths = _get_dependency_file_paths(project_root)
+    paths = get_dependency_file_paths(project_root)
     extra_requires = {}
     for path in paths: 
         dependencies = []
         for editable, dependency, version_spec, _ in parse_requirements_file(path):
-            if not dependency:
+            if not dependency or is_sip_dependency(dependency):
                 continue
             if editable:
                 # transform editable dependency into its package name

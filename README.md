@@ -94,7 +94,9 @@ we recommend shell scripts for simple deployments as they don't have dependencie
 complex work such as migrating data to a new database structure, include a
 Python script and call it from the shell script after having made the venv.
 
-## Project decisions
+## Developer guide
+
+### Project decisions
 
 Git stashing is not user-friendly and should not be relied upon. Stashing only
 certain files or hunks can be done with `git stash -p` but that doesn't work
@@ -109,7 +111,21 @@ can still require a clean directory before release however.
 Warn on a poorly formatted project name (underscores, upper case) instead of
 raising an error. The project may already have been submitted and the index 
 may not allow renaming the package (although PyPI allows it through a support
-ticket). 
+ticket).
+
+SIP based packages are not installable from PyPI and the SIP team hasn't fixed
+this.  Writing a setuptools package for SIP is non-trivial. This means we must
+use their build process (configure, make, make install). Eggs and wheels don't
+allow installing files in system directories. SIP based packages stick close
+enough to non-system directories in a venv. We could make a setup.py with
+`zip_safe=False` and put all files installed by `make install` in
+`package_data`, then use `bdist_wheel` on it to create a binary
+platform-dependent wheel. This is a bit more error-prone (e.g. a .so file
+appearing in an unexpected place would break things) without much benefit as
+these wheels probably can't be shared across machines. In order to support SIP
+based packages, we install them without pip and reuse the dev venv in
+pre-commits as to not incur the performance hit of waiting for a SIP package to
+compile.
 
 ## See also
 
@@ -117,3 +133,4 @@ Python packaging recommendations:
 
 - https://packaging.python.org/en/latest/distributing.html
 - https://github.com/pypa/sampleproject
+

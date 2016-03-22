@@ -7,9 +7,9 @@ from contextlib import contextmanager
 from checksumdir import dirhash
 from pathlib import Path
 import plumbum as pb
+import logging
 import pytest
 import pprint
-import shutil
 import re
 
 mkproject = pb.local['ct-mkproject']
@@ -150,18 +150,7 @@ def file_hash(path):
             if not buffer:
                 return hash_.digest()
             
-def remove_file(path):
-    '''
-    Remove file or directory (recursively)
-    
-    Parameters
-    ----------
-    path : Path
-    '''
-    if path.is_dir():
-        shutil.rmtree(str(path))
-    else:
-        path.unlink()
+
 
 ## setup util ###########################################
 
@@ -217,6 +206,20 @@ def write_complex_requirements_in():
     write_file('requirements.in', _requirements_in_difficult_template)
     Path('pkg_magic').mkdir()
     write_file('pkg_magic/setup.py', _pkg_magic_setup_py_template)
+    
+def reset_logging(): # TODO add to CTU
+    '''
+    Reset logging to its original state (as if it were freshly imported)
+    
+    Note: pytest also resets logging between tests it seems, but
+    if you need to setup logging twice in the same test, this is
+    what you need.
+    '''
+    root = logging.root
+    while root.handlers:
+        root.removeHandler(root.handlers[-1])
+    while root.filters:
+        root.removeFilter(root.filters[-1])
 
 ## assertion util ##############################
 

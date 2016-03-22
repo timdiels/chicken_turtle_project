@@ -3,20 +3,21 @@ ct-mkproject tests
 '''
 
 from chicken_turtle_project.test.common import (
-    create_project, remove_file, mkproject, project_defaults, write_project, write_file, 
+    create_project, mkproject, project_defaults, write_project, write_file, 
     git_, requirements_in1, license_txt1, readme1, test_one1, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
     read_file, gitignore1, get_setup_args, files_create_project,
     pkg_init1, write_complex_requirements_in, test_fail1
 )
 from contextlib import ExitStack
-from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name
+from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name, remove_file
 from pathlib import Path
 from configparser import ConfigParser
 import plumbum as pb
 import itertools
 import pytest
 import git
+import re
 
 ## setup, asserts, util #######################################
 
@@ -292,6 +293,32 @@ def test_setup_py(tmpcwd):
     for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
         deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(path) if line[1]]
         assert is_subsequence(deps_in, deps_txt)
+        
+def test_sip_dependency(tmpcwd):
+    '''
+    When sip based dependency, do not put it in setup.py or requirements.txt
+    '''
+    create_project()
+    write_file('requirements.in', 'pytest\nsip==4.17\nPyQt5==5.5.1\n')
+    
+    mkproject & pb.FG
+    
+    setup_args = get_setup_args()
+    assert setup_args['install_requires'] == ['pytest']
+    
+    requirements_txt = read_file('requirements.txt')
+    assert 'sip' not in requirements_txt
+    assert not re.match('(?i)pyqt5', requirements_txt)
+    
+def test_unpinned_sip_dependency(tmpcwd):
+    '''
+    When sip based dependency is not pinned, error
+    '''
+    create_project()
+    write_file('requirements.in', 'pytest\nPyQt5\n')
+    
+    with assert_process_fails(stderr_matches=r"(?i)'PyQt5' .* pin"):
+        mkproject()
     
 def test_precommit_invalid(tmpcwd):
     '''

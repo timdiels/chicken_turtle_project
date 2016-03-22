@@ -2,31 +2,16 @@
 ct-release tests
 '''
 
-from chicken_turtle_util.exceptions import UserException
 from chicken_turtle_project.test.common import (
-    create_project, assert_re_search, git_, mkproject, project1, write_project, 
-    test_one1, write_file, get_setup_args, write_complex_requirements_in, test_fail1
+    create_project, git_, mkproject, project1, write_project, 
+    test_one1, write_file, get_setup_args, write_complex_requirements_in, test_fail1,
+    reset_logging
 )
 from chicken_turtle_project.release import main as release_
 from pathlib import Path
 import plumbum as pb
 import pytest
 from click.testing import CliRunner
-import logging
-
-def reset_logging():
-    '''
-    Reset logging to its original state (as if it were freshly imported)
-    
-    Note: pytest also resets logging between tests it seems, but
-    if you need to setup logging twice in the same test, this is
-    what you need.
-    '''
-    root = logging.root
-    while root.handlers:
-        root.removeHandler(root.handlers[-1])
-    while root.filters:
-        root.removeFilter(root.filters[-1])
     
 def release(*args, **invoke_kwargs):
     '''
@@ -74,7 +59,6 @@ def create_release_project(test_index=True):
 
 ## tests ##########################
 
-@pytest.mark.current
 def test_ignore_staged(tmpcwd):
     '''
     When working directory is dirty, ignore staged changes

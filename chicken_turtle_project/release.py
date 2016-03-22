@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
-from chicken_turtle_util.exceptions import UserException, log_exception
+from chicken_turtle_util.exceptions import UserException
 from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging, parse_requirements_file
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
