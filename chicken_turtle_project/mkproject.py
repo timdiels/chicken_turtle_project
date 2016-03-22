@@ -526,6 +526,9 @@ gitignore_patterns = r'''
 .project
 .pydevproject
 .cproject
+.coverage
+.testmondata
+.tmontmp
 venv
 *.pyc
 __pycache__
