@@ -173,9 +173,10 @@ def create_project():
     write_file('setup.cfg', setup_cfg1)
     write_file('setup.py', 'bork')
     write_file('README.md', readme1)
+    write_file('.coveragerc', '')
     git_('init')
     
-files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in test_requirements.in .gitignore setup.cfg setup.py LICENSE.txt README.md'.split()}
+files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in test_requirements.in .gitignore setup.cfg setup.py LICENSE.txt README.md .coveragerc'.split()}
 '''files created by create_project'''
 
 def write_project(project):

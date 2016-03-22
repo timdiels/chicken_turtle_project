@@ -16,7 +16,6 @@ from configparser import ConfigParser
 import plumbum as pb
 import itertools
 import pytest
-import git
 import re
 
 ## setup, asserts, util #######################################
@@ -27,6 +26,7 @@ file_permissions = {
     Path('operation_mittens/test/conftest.py') : 'create',
     Path('requirements.in') : 'create',
     Path('test_requirements.in') : 'create',
+    Path('.coveragerc') : 'create',
     Path('requirements.txt') : 'overwrite',
     Path('.gitignore') : 'update',
     Path('setup.cfg') : 'update',
@@ -227,9 +227,31 @@ def test_updates(tmpcwd):
     assert config['pytest']['env'] == 'PYTHONHASHSEED=0'  # created (would be unchanged if present)
     assert config['metadata']['description-file'] == 'README.md'  # overwritten
     assert config['other']['mittens_says'] == 'meow'  # unchanged
+
+def test_defaults(tmpcwd):
+    '''
+    When given a minimal project, add the correct defaults
+    '''
+    create_project()
+    remove_file(Path('setup.cfg'))
+    remove_file(Path('.coveragerc'))
+    
+    mkproject()
+    
+    # setup.cfg
+    config = ConfigParser()
+    config.read('setup.cfg')
+    assert config['pytest']['addopts'] == '\n--basetemp=last_test_runs\n--cov=operation_mittens\n--cov-config=.coveragerc\n--testmon\n--maxfail=1\n-n auto'
+    
+    # .coveragerc
+    assert read_file('.coveragerc') == '[run]\nomit = operation_mittens/test/*\n'
+    
+    # Part of the rest is covered by `test_updates`
     
 def test_setup_py(tmpcwd):
     '''
+    Test generated setup.py and requirements.txt
+    
     - install_requires: requirements.in transformed into valid dependency list with version specs maintained
     - long_description present and nonempty
     - classifiers: list of str
@@ -279,7 +301,7 @@ def test_setup_py(tmpcwd):
     assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
     assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test'}
     assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
-    assert set(setup_args['extras_require']['test']) == {'pytest', 'pytest-xdist', 'pytest-env'}
+    assert set(setup_args['extras_require']['test']) == {'pytest', 'pytest-xdist', 'pytest-env', 'pytest-testmon', 'pytest-cov', 'coverage_pth'}
     assert setup_args['version'] == '0.0.0'
     assert 'download_url' not in setup_args
     

@@ -78,7 +78,7 @@ def _main():
     extra_dependencies = installed_dependencies - desired_dependencies
     if extra_dependencies:
         logger.info('Removing packages not listed as dependencies')
-        pip('uninstall', *extra_dependencies)
+        pip('uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
     logger.info('Installing dependencies')

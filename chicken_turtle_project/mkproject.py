@@ -156,7 +156,9 @@ def _main(pre_commit, project_version):
         
         setup_cfg_path = project_root / 'setup.cfg'
         _ensure_setup_cfg_exists(setup_cfg_path)
-        _update_setup_cfg(setup_cfg_path, project, project_root)
+        _update_setup_cfg(setup_cfg_path, project, project_root, pkg_root)
+        
+        _ensure_coveragerc_exists(project_root, pkg_root)
         
         gitignore_path = project_root / '.gitignore'
         _ensure_gitignore_exists(gitignore_path)
@@ -252,7 +254,7 @@ def _ensure_setup_cfg_exists(setup_cfg_path):
         setup_cfg_path.touch()
         git_('add', setup_cfg_path)
         
-def _update_setup_cfg(setup_cfg_path, project, project_root):
+def _update_setup_cfg(setup_cfg_path, project, project_root, pkg_root):
     # Ensure sections exist
     config = ConfigParser()
     config.read(str(setup_cfg_path))
@@ -263,7 +265,7 @@ def _update_setup_cfg(setup_cfg_path, project, project_root):
     # Update options
     changed = False
     if 'addopts' not in config['pytest']:
-        config['pytest']['addopts'] = '--basetemp=last_test_runs --maxfail=1'
+        config['pytest']['addopts'] = pytest_addopts_template.format(pkg_root.name)
         changed = True
         
     if 'env' not in config['pytest']:
@@ -285,6 +287,14 @@ def _update_setup_cfg(setup_cfg_path, project, project_root):
         with setup_cfg_path.open('w') as f:
             config.write(f)
         git_('add', setup_cfg_path)
+        
+def _ensure_coveragerc_exists(project_root, pkg_root):
+    coveragerc_path = project_root / '.coveragerc'
+    if not coveragerc_path.exists():
+        logger.info('Creating .coveragerc')
+        with coveragerc_path.open('w') as f:
+            f.write(coveragerc_template.format(pkg_root.name))
+        git_('add', coveragerc_path)
         
 def _ensure_gitignore_exists(gitignore_path):
     if not gitignore_path.exists():
@@ -542,4 +552,21 @@ test_requirements_in_template = '''
 pytest
 pytest-xdist
 pytest-env
+pytest-testmon
+pytest-cov
+coverage_pth
+'''.lstrip()
+
+pytest_addopts_template = '''
+--basetemp=last_test_runs
+--cov={}
+--cov-config=.coveragerc
+--testmon
+--maxfail=1
+-n auto
+'''.rstrip()
+
+coveragerc_template = '''
+[run]
+omit = {}/test/*
 '''.lstrip()
