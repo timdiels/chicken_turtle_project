@@ -7,17 +7,17 @@ pypandoc==1.1.3
 GitPython==1.0.2
 pip-tools==1.6
 checksumdir==1.0.5
+versio==0.3.0
 pytest==2.9.0
 pytest-xdist==1.14
 pytest-env==0.6.0
-versio==0.3.0
-networkx==1.11
 pytest-mock==0.11.0
+networkx==1.11
+execnet==1.4.1            # via pytest-xdist
+smmap==0.9.0              # via gitdb
+first==2.0.1              # via pip-tools
+py==1.4.31                # via pytest, pytest-xdist
 apipkg==1.4               # via execnet
 six==1.10.0               # via pip-tools
 gitdb==0.6.4              # via gitpython
-smmap==0.9.0              # via gitdb
-py==1.4.31                # via pytest, pytest-xdist
 decorator==4.0.9          # via networkx
-execnet==1.4.1            # via pytest-xdist
-first==2.0.1              # via pip-tools

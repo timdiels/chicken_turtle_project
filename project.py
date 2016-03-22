@@ -58,6 +58,7 @@ project = dict(
             'ct-mkvenv = chicken_turtle_project.mkvenv:main',
             'ct-release = chicken_turtle_project.release:main',
             'ct-interpreter = chicken_turtle_project.interpreter:main',
+            'ct-pre-commit-hook = chicken_turtle_project.pre_commit_hook:main',
         ],
     },
 )
