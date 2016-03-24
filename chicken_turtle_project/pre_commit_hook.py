@@ -47,7 +47,7 @@ def main():
                     Path(testmondata_path.name).symlink_to(testmondata_path)
                     
                 # Update project
-                pb.local['ct-mkproject']('--pre-commit')
+                pb.local['ct-mkproject']['--pre-commit'] & pb.FG
                 
                 # Forget about Git and Chicken Turtle environment
                 bad_env_vars = [k for k in pb.local.env.keys() if k.startswith('GIT_') or k.startswith('CT_')]
@@ -55,8 +55,8 @@ def main():
                     del pb.local.env[name]
                 
                 # Run tests
-                pb.local['ct-mkvenv']()
-                pb.local['venv/bin/py.test'](retcode=(0,5))
+                pb.local['ct-mkvenv'] & pb.FG
+                pb.local['venv/bin/py.test'] & pb.FG(retcode=(0,5))
             
         finally:
             remove_file(temp_dir)
