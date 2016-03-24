@@ -561,7 +561,6 @@ coverage_pth
 
 pytest_addopts_template = '''
 --basetemp=last_test_runs
---cov={}
 --cov-config=.coveragerc
 --testmon
 --maxfail=1

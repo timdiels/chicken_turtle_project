@@ -58,7 +58,10 @@ appears before `Y` in `requirements.in` it will be installed before `Y` (unless
 ### Testing
 
 Tests must be placed in `$project_name.test` or a sub-package thereof. Tests are
-run with py.test from the project root from within a `venv`.
+run from within the venv with `py.test`. To enter the venv, run `. venv/bin/activate`.
+
+To get a coverage report, run: `py.test --cov=$your_project_name --testmon-off`.
+If you forgot to add `--testmon-off`, run `rm .testmondata` to fix testmon.
 
 ### Releasing to Python indices
 

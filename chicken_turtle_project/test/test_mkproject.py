@@ -241,7 +241,7 @@ def test_defaults(tmpcwd):
     # setup.cfg
     config = ConfigParser()
     config.read('setup.cfg')
-    assert config['pytest']['addopts'] == '\n--basetemp=last_test_runs\n--cov=operation_mittens\n--cov-config=.coveragerc\n--testmon\n--maxfail=1'
+    assert config['pytest']['addopts'] == '\n--basetemp=last_test_runs\n--cov-config=.coveragerc\n--testmon\n--maxfail=1'
     
     # .coveragerc
     assert read_file('.coveragerc') == '[run]\nomit = operation_mittens/test/*\n'

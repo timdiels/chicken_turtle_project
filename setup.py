@@ -41,7 +41,12 @@ setup(
                                                'ct-release = chicken_turtle_project.release:main',
                                                'ct-interpreter = chicken_turtle_project.interpreter:main',
                                                'ct-pre-commit-hook = chicken_turtle_project.pre_commit_hook:main']},
-    'extras_require': {'test': ['pytest', 'pytest-env', 'pytest-testmon', 'pytest-cov', 'coverage_pth', 'pytest-mock']},
+    'extras_require': {   'test': [   'pytest',
+                                      'pytest-env',
+                                      'pytest-testmon',
+                                      'pytest-cov',
+                                      'coverage_pth',
+                                      'pytest-mock']},
     'install_requires': [   'collections-extended',
                             'more_itertools',
                             'chicken_turtle_util==1.0.0',
@@ -125,7 +130,12 @@ setup(
                         '~~~~~~~\n'
                         '\n'
                         'Tests must be placed in ``$project_name.test`` or a sub-package thereof.\n'
-                        'Tests are run with py.test from the project root from within a ``venv``.\n'
+                        'Tests are run from within the venv with ``py.test``. To enter the venv,\n'
+                        'run ``. venv/bin/activate``.\n'
+                        '\n'
+                        'To get a coverage report, run:\n'
+                        '``py.test --cov=$your_project_name --testmon-off``. If you forgot to add\n'
+                        '``--testmon-off``, run ``rm .testmondata`` to fix testmon.\n'
                         '\n'
                         'Releasing to Python indices\n'
                         '~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
