@@ -1,5 +1,4 @@
 pytest
-pytest-xdist
 pytest-env
 pytest-testmon
 pytest-cov

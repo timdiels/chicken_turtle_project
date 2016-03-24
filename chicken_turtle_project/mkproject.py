@@ -553,7 +553,6 @@ signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
 
 test_requirements_in_template = '''
 pytest
-pytest-xdist
 pytest-env
 pytest-testmon
 pytest-cov
@@ -566,7 +565,6 @@ pytest_addopts_template = '''
 --cov-config=.coveragerc
 --testmon
 --maxfail=1
--n auto
 '''.rstrip()
 
 coveragerc_template = '''

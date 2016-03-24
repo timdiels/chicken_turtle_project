@@ -1,27 +1,29 @@
-pytest==2.9.0
-pytest-xdist==1.14
-pytest-env==0.6.0
-pytest-testmon==0.8.2
-pytest-cov==2.2.1
-coverage-pth==0.0.1
 collections-extended==0.7.0
 more-itertools==2.2
 chicken-turtle-util==1.0.0
 click==6.3
 plumbum==1.6.1.post0
 pypandoc==1.1.3
+pytest==2.9.0
+pytest-env==0.6.0
 GitPython==1.0.2
 pip-tools==1.6
 checksumdir==1.0.5
 versio==0.3.0
-pytest-mock==0.11.0
+pytest-testmon==0.8.2
+pytest-cov==2.2.1
+coverage-pth==0.0.1
 networkx==1.11
-py==1.4.31                # via pytest, pytest-xdist
-apipkg==1.4               # via execnet
-smmap==0.9.0              # via gitdb
-execnet==1.4.1            # via pytest-xdist
+pytest-mock==0.11.0
+funcsigs==0.4             # via mock
+six==1.10.0               # via mock, pip-tools
 coverage==4.0.3           # via coverage-pth, pytest-cov, pytest-testmon
-first==2.0.1              # via pip-tools
-six==1.10.0               # via pip-tools
-gitdb==0.6.4              # via gitpython
 decorator==4.0.9          # via networkx
+smmap==0.9.0              # via gitdb
+mock==1.3.0               # via pytest-mock
+ordereddict==1.1          # via versio
+gitdb==0.6.4              # via gitpython
+py==1.4.31                # via pytest
+first==2.0.1              # via pip-tools
+argparse==1.4.0           # via versio
+pbr==1.8.1                # via mock
