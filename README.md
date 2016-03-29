@@ -63,6 +63,13 @@ run from within the venv with `py.test`. To enter the venv, run `. venv/bin/acti
 To get a coverage report, run: `py.test --cov=$your_project_name --testmon-off`.
 If you forgot to add `--testmon-off`, run `rm .testmondata` to fix testmon.
 
+### Documenting
+
+Sphinx is used to generate documentation. `ct-mkproject` generates a `doc_src`
+directory containing the source of the documentation of the project. API doc is
+generated in `doc_src/api`. `index.rst` by default includes the API. The compiled
+html documentation is placed in `doc/`. 
+
 ### Releasing to Python indices
 
 To release your project to a Python index (e.g. PyPI, devpi), use `ct-release`.

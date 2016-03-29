@@ -4,6 +4,7 @@ from chicken_turtle_project.common import (
     parse_requirements_file, get_dependency_name, get_pkg_root, 
     is_sip_dependency, get_dependency_file_paths
 )
+from chicken_turtle_project import specification as spec
 from setuptools import find_packages  # Always prefer setuptools over distutils
 from collections import defaultdict
 from pathlib import Path
@@ -87,7 +88,7 @@ def toset_from_tosets(*tosets):
     help='Internal option, do not use.'
 )
 @click.version_option(version=__version__)
-def _main(pre_commit, project_version):
+def _main(pre_commit, project_version): #TODO docstring out of sync?
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
@@ -102,12 +103,15 @@ def _main(pre_commit, project_version):
     - $project_name/test package
     - $project_name/test/conftest.py
     - requirements.in
-    - test_requirements.in
+    - doc_src
     
     The following files may be created or updated by merging in changes:
     - $project_name/__init__.py
     - .gitignore
     - setup.cfg
+    - dev_requirements.in
+    - test_requirements.in
+    - MANIFEST.in
     
     The following files will be created or overwritten if they exist:
     - requirements.txt
@@ -144,27 +148,51 @@ def _main(pre_commit, project_version):
         pkg_root = get_pkg_root(project_root, project['name'])
         project['version'] = project_version
         
+        format_kwargs = {
+            'name': project['name'],
+            'readme_file': project['readme_file'],
+            'pkg_name': pkg_root.name,
+            'version': project_version,
+        }
+        
         _ensure_root_package_exists(pkg_root)
-        _update_root_package(pkg_root, project['version'])
+        _update_root_package(pkg_root, format_kwargs)
         
         test_root = pkg_root / 'test'
         _ensure_test_package_exists(test_root)
-        _ensure_conftest_exists(test_root)
         
-        _ensure_requirements_in_exists(project_root)
-        _ensure_test_requirements_in_exists(project_root)
+        conftest_py_path = test_root / 'conftest.py'
+        _ensure_exists(conftest_py_path)
+        _ensure_contains_snippets(conftest_py_path, {spec.conftest_py}, format_kwargs)
+        
+        manifest_in = project_root / 'MANIFEST.in'
+        _ensure_exists(manifest_in)
+        _ensure_contains_snippets(manifest_in, spec.manifest_in, format_kwargs)
+        
+        requirements_in_path = project_root / 'requirements.in'
+        _ensure_exists(requirements_in_path)
+        _ensure_contains_snippets(requirements_in_path, {spec.requirements_in_header}, format_kwargs)
+
+        test_requirements_in_path = project_root / 'test_requirements.in'
+        _ensure_exists(test_requirements_in_path)
+        _ensure_contains_snippets(test_requirements_in_path, spec.test_requirements_in, format_kwargs)
         
         setup_cfg_path = project_root / 'setup.cfg'
-        _ensure_setup_cfg_exists(setup_cfg_path)
-        _update_setup_cfg(setup_cfg_path, project, project_root, pkg_root)
+        _ensure_exists(setup_cfg_path)
+        _update_ini_file(setup_cfg_path, spec.setup_cfg_defaults, spec.setup_cfg_overwrite, format_kwargs)
         
-        _ensure_coveragerc_exists(project_root, pkg_root)
+        coveragerc_path = project_root / '.coveragerc'
+        _ensure_exists(coveragerc_path)
+        _update_ini_file(coveragerc_path, spec.coveragerc_defaults, spec.coveragerc_overwrite, format_kwargs)
         
         gitignore_path = project_root / '.gitignore'
-        _ensure_gitignore_exists(gitignore_path)
-        _update_gitignore(gitignore_path)
+        _ensure_exists(gitignore_path)
+        _ensure_contains_snippets(gitignore_path, spec.gitignore_patterns, format_kwargs)
         
-        _ensure_precommit_hook_exists(repo)
+        pre_commit_hook = Path(repo.git_dir) / 'hooks/pre-commit'
+        _ensure_exists(pre_commit_hook, git_add=False)
+        _ensure_contains_snippets(pre_commit_hook, {spec.pre_commit_hook}, format_kwargs, git_add=False)
+        pre_commit_hook.chmod(0o775)
         
         _raise_if_missing_file(project)
         
@@ -172,7 +200,8 @@ def _main(pre_commit, project_version):
         # TODO ensure the readme_file is mentioned in MANIFEST.in
         
         _update_requirements_txt(project_root)
-        _update_setup_py(project, project_root, pkg_root)
+        
+        _update_setup_py(project, project_root, pkg_root, format_kwargs)
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
@@ -182,7 +211,7 @@ def _ensure_project_exists(project_root):
         assert project_name and project_name.strip()
         with project_path.open('w') as f:
             logger.info('Creating project.py')
-            f.write(project_template.format(name=project_name, pkg_name=get_pkg_root(project_root, project_name).name))
+            f.write(spec.project_py.format(name=project_name, pkg_name=get_pkg_root(project_root, project_name).name))
             git_('add', str(project_path))
 
 def _ensure_root_package_exists(pkg_root):
@@ -197,12 +226,12 @@ def _ensure_root_package_exists(pkg_root):
         logger.info('Creating {}'.format(pkg_root_init))
         pkg_root_init.touch()
         
-def _update_root_package(pkg_root, version):
+def _update_root_package(pkg_root, format_kwargs):
     '''
     Set __version__ in package root __init__.py
     '''
     pkg_root_init = pkg_root / '__init__.py'
-    version_line = version_template.format(version)
+    version_line = spec.version_line.format(**format_kwargs)
     with pkg_root_init.open('r') as f:
         lines = f.read().splitlines()
     for i, line in enumerate(lines):
@@ -227,107 +256,73 @@ def _ensure_test_package_exists(test_root):
         test_root_init.touch()
         git_('add', test_root_init)
         
-def _ensure_conftest_exists(test_root):
-    conftest_py_path = test_root / 'conftest.py'
-    if not conftest_py_path.exists():
-        logger.info('Creating test/conftest.py')
-        with conftest_py_path.open('w') as f:
-            f.write(conftest_py_template)
-        git_('add', conftest_py_path)
+def _ensure_exists(path, git_add=True):
+    '''
+    Ensure file exists
+    '''
+    if not path.exists():
+        logger.info('Creating {}'.format(path))
+        path.touch()
+        if git_add:
+            git_('add', str(path))
         
-def _ensure_requirements_in_exists(project_root):
-    requirements_in_path = project_root / 'requirements.in'
-    if not requirements_in_path.exists():
-        logger.info('Creating requirements.in')
-        requirements_in_path.touch()
-
-def _ensure_test_requirements_in_exists(project_root):
-    requirements_in_path = project_root / 'test_requirements.in'
-    if not requirements_in_path.exists():
-        logger.info('Creating test_requirements.in')
-        with requirements_in_path.open('w') as f:
-            f.write(test_requirements_in_template)
+def _ensure_contains_snippets(path, snippets, format_kwargs, git_add=True):
+    '''
+    Ensure snippets are present in file
+    '''
+    with path.open('r') as f:
+        content = f.read()
+    snippets = (snippet.format(**format_kwargs) for snippet in snippets)
+    missing_snippets = [snippet for snippet in snippets if snippet not in content]
+    if missing_snippets:
+        logger.info('Inserting missing snippets into {}'.format(path))
+        with path.open('w') as f:
+            f.write('\n'.join(missing_snippets + [content]))
+        if git_add:
+            git_('add', path)
         
-def _ensure_setup_cfg_exists(setup_cfg_path):
-    if not setup_cfg_path.exists():
-        logger.info('Creating setup.cfg')
-        setup_cfg_path.touch()
-        git_('add', setup_cfg_path)
-        
-def _update_setup_cfg(setup_cfg_path, project, project_root, pkg_root):
-    # Ensure sections exist
+def _update_ini_file(path, defaults, overwrite, format_kwargs, git_add=True):
+    '''
+    Ensure defaults are applied to missing options and some options are 
+    overwritten to a fixed value
+    '''
     config = ConfigParser()
-    config.read(str(setup_cfg_path))
-    for section_name in ('pytest', 'metadata'):
-        if section_name not in config.sections():
-            config.add_section(section_name)
-            
-    # Update options
+    config.read(str(path))
     changed = False
-    if 'addopts' not in config['pytest']:
-        config['pytest']['addopts'] = pytest_addopts_template.format(pkg_root.name)
-        changed = True
-        
-    if 'env' not in config['pytest']:
-        config['pytest']['env'] = 'PYTHONHASHSEED=0'
-        changed = True
     
-    test_paths = '{}/test'.format(get_pkg_root(project_root, project['name']).name)
-    if 'testpaths' not in config['pytest'] or config['pytest']['testpaths'] != test_paths:
-        config['pytest']['testpaths'] = test_paths
-        changed = True
-        
-    if 'description-file' not in config['metadata'] or config['metadata']['description-file'] != project['readme_file']:
-        config['metadata']['description-file'] = project['readme_file']
-        changed = True
+    # Ensure sections exist
+    for section in defaults.keys() | overwrite.keys():
+        if section not in config.sections():
+            changed = True
+            config.add_section(section)
+    
+    # Set missing options to their default if any
+    for section in defaults:
+        for option, value in defaults[section].items():
+            if not config.has_option(section, option):
+                config[section][option] = value.format(**format_kwargs)
+                changed = True
+    
+    # Overwrite forced options
+    for section in overwrite:
+        for option, value in overwrite[section].items():
+            value = value.format(**format_kwargs)
+            if config.get(section, option, fallback=None) != value:
+                config[section][option] = value
+                changed = True
     
     # Write updated
     if changed:
-        logger.info('Writing setup.cfg')
-        with setup_cfg_path.open('w') as f:
+        logger.info('Writing {}'.format(path))
+        with path.open('w') as f:
             config.write(f)
-        git_('add', setup_cfg_path)
-        
-def _ensure_coveragerc_exists(project_root, pkg_root):
-    coveragerc_path = project_root / '.coveragerc'
-    if not coveragerc_path.exists():
-        logger.info('Creating .coveragerc')
-        with coveragerc_path.open('w') as f:
-            f.write(coveragerc_template.format(pkg_root.name))
-        git_('add', coveragerc_path)
-        
-def _ensure_gitignore_exists(gitignore_path):
-    if not gitignore_path.exists():
-        logger.info('Creating .gitignore')
-        gitignore_path.touch()
-        git_('add', gitignore_path)
-        
-def _update_gitignore(gitignore_path):
-    '''
-    Ensure the right patterns are present in .gitignore
-    '''
-    with gitignore_path.open('r') as f:
-        content = f.read()
-    patterns = set(map(str.strip, content.splitlines()))
-    missing_patterns = gitignore_patterns - patterns
-    if missing_patterns:
-        logger.info('Inserting missing patterns into .gitignore')
-        with gitignore_path.open('w') as f:
-            f.write('\n'.join(list(missing_patterns) + [content]))
-        git_('add', gitignore_path)
+        if git_add:
+            git_('add', path)
         
 def _raise_if_missing_file(project):
     for file in ('LICENSE.txt', project['readme_file']):
         if not glob(file):
             raise UserException("Missing file: {}".format(file))
-    
-def _ensure_precommit_hook_exists(repo):    
-    pre_commit_hook_path = Path(repo.git_dir) / 'hooks/pre-commit'
-    if not pre_commit_hook_path.exists():
-        logger.info('Creating {}'.format(pre_commit_hook_path))
-        with pre_commit_hook_path.open('w') as f:
-            f.write(pre_commit_hook_template)
-        pre_commit_hook_path.chmod(0o775)
 
 def _update_requirements_txt(project_root):
     logger.info('Writing requirements.txt')
@@ -347,9 +342,9 @@ def _update_requirements_txt(project_root):
                         f.write(line + '\n')
                     elif not version_spec or not version_spec.startswith('=='):
                         raise UserException("{!r} must be pinned (i.e. must have a '==version' suffix) as it's a sip dependency".format(dependency))
-        
+
         # Compile requirements
-        pb.local['pip-compile'](str(regular_dependencies_path), '-o', 'requirements.txt')
+        pb.local['pip-compile'](str(regular_dependencies_path), '-o', 'requirements.txt')  # Note: this eats up most of the time
     finally:
         regular_dependencies_path.unlink()
     
@@ -373,7 +368,7 @@ def _update_requirements_txt(project_root):
     # Stage it
     git_('add', 'requirements.txt')
 
-def _update_setup_py(project, project_root, pkg_root):
+def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     logger.debug('Preparing to write setup.py')
     project.update(_get_dependencies(project_root))
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
@@ -383,7 +378,7 @@ def _update_setup_py(project, project_root, pkg_root):
     
     # Add download_url if current commit is version tagged
     if project['version'] != _dummy_version:
-        project['download_url'] = project['download_url'].format(version=project['version'])
+        project['download_url'] = project['download_url'].format(**format_kwargs)
     else:
         del project['download_url']
     
@@ -395,7 +390,7 @@ def _update_setup_py(project, project_root, pkg_root):
     logger.info('Writing setup.py')
     setup_py_path = project_root / 'setup.py'
     with setup_py_path.open('w') as f:
-        f.write(setup_template.format(pprint.pformat(project, indent=4, width=120)))
+        f.write(setup_py_template.format(pprint.pformat(project, indent=4, width=120)))
     git_('add', setup_py_path)
   
 def _get_dependencies(project_root):
@@ -440,133 +435,10 @@ def _get_package_data(project_root, pkg_root):
                     package_data[parent.replace('/', '.')].extend(str(Path(parent2) / file) for file in files2)
     return dict(package_data)
         
-        
-setup_template = '''
-# Auto generated by ct-mksetup
-# Do not edit this file, edit ./project.py instead
+setup_py_template = spec.setup_py_header + '''\
 
 from setuptools import setup
 setup(
     **{}
 )
-'''.lstrip()
-        
-project_template = """
-project = dict(
-    name='{name}',
-    description='Short description',
-    author='your name',
-    author_email='your_email@example.com',
-    readme_file='README.md',
-    url='https://example.com/project/home', # project homepage
-    download_url='https://example.com/repo/{{version}}', # Template for url to download source archive from. You can refer to the current version with {{version}}. You can get one from github or gitlab for example.
-    license='LGPL3',
- 
-    # What does your project relate to?
-    keywords='keyword1 key-word2',
-    
-    # Package indices to release to using `ct-release`
-    # These names refer to those defined in ~/.pypirc.
-    # For pypi, see http://peterdowns.com/posts/first-time-with-pypi.html
-    # For devpi, see http://doc.devpi.net/latest/userman/devpi_misc.html#using-plain-setup-py-for-uploading
-    index_test = 'pypitest',  # Index to use for testing a release, before releasing to `index_production`. `index_test` can be set to None if you have no test index
-    index_production = 'pypi',
-    
-    # https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    # Note: you must add ancestors of any applicable classifier too
-    classifiers='''
-        Development Status :: 2 - Pre-Alpha
-        Intended Audience :: Developers
-        License :: OSI Approved
-        License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
-        Natural Language :: English
-        Operating System :: POSIX
-        Operating System :: POSIX :: AIX
-        Operating System :: POSIX :: BSD
-        Operating System :: POSIX :: BSD :: BSD/OS
-        Operating System :: POSIX :: BSD :: FreeBSD
-        Operating System :: POSIX :: BSD :: NetBSD
-        Operating System :: POSIX :: BSD :: OpenBSD
-        Operating System :: POSIX :: GNU Hurd
-        Operating System :: POSIX :: HP-UX
-        Operating System :: POSIX :: IRIX
-        Operating System :: POSIX :: Linux
-        Operating System :: POSIX :: Other
-        Operating System :: POSIX :: SCO
-        Operating System :: POSIX :: SunOS/Solaris
-        Operating System :: Unix
-        Programming Language :: Python
-        Programming Language :: Python :: 3
-        Programming Language :: Python :: 3 :: Only
-        Programming Language :: Python :: 3.2
-        Programming Language :: Python :: 3.3
-        Programming Language :: Python :: 3.4
-        Programming Language :: Python :: 3.5
-        Programming Language :: Python :: Implementation
-        Programming Language :: Python :: Implementation :: CPython
-        Programming Language :: Python :: Implementation :: Stackless
-    ''',
- 
-    # Auto generate entry points
-    entry_points={{
-        'console_scripts': [
-            'mycli = {pkg_name}.main:main', # just an example, any module will do, this template doesn't care where you put it
-        ],
-    }},
-)
-""".lstrip()
-
-version_template = """
-__version__ = '{}'  # Auto generated by ct-mksetup, do not edit this line, instead use `git tag v{{version}}`, e.g. `git tag v1.0.0-dev1`.
-""".strip()
-
-gitignore_patterns = r'''
-*.orig
-*.swp
-.project
-.pydevproject
-.cproject
-.coverage
-.testmondata
-.tmontmp
-venv
-*.pyc
-__pycache__
-*.egg-info
-.cache
-last_test_runs
-dist
-'''
-gitignore_patterns = {line for line in map(str.strip, gitignore_patterns.splitlines()) if line}
-
-pre_commit_hook_template = '''
-#!/bin/sh
-# Auto generated by ct-mkproject, you may add to this file,
-ct-pre-commit-hook # but don't remove this call
-'''.lstrip()
-
-conftest_py_template = '''
-# http://stackoverflow.com/a/30091579/1031434
-from signal import signal, SIGPIPE, SIG_DFL
-signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
-'''.lstrip()
-
-test_requirements_in_template = '''
-pytest
-pytest-env
-pytest-testmon
-pytest-cov
-coverage_pth
-'''.lstrip()
-
-pytest_addopts_template = '''
---basetemp=last_test_runs
---cov-config=.coveragerc
---testmon
---maxfail=1
-'''.rstrip()
-
-coveragerc_template = '''
-[run]
-omit = {}/test/*
 '''.lstrip()

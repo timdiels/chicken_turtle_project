@@ -30,9 +30,15 @@ class SIPDependency(_SIPDependency):
 @click.version_option(version=__version__)
 def main():
     '''
-    Create Python virtual environment in `venv` and install project in it
+    Create Python virtual environment in `./venv` and install project in it.
     
-    Must be run from the directory containing `project.py`.
+    The following input files are required:
+    
+    - `./*requirements.in`
+    - `./setup.py`
+    - `./requirements.txt`
+    
+    See also: `ct-mkproject` for generating/updating the above files.
     '''
     init_logging()
     with graceful_main(logger):

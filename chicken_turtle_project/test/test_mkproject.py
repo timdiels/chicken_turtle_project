@@ -3,64 +3,172 @@ ct-mkproject tests
 '''
 
 from chicken_turtle_project.test.common import (
-    create_project, mkproject, project_defaults, write_project, write_file, 
-    git_, requirements_in1, license_txt1, readme1, test_one1, project1,
+    create_project, mkproject, project_defaults, write_file, git_, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
-    read_file, gitignore1, get_setup_args, files_create_project,
-    pkg_init1, write_complex_requirements_in, test_fail1
+    read_file, get_setup_args, extra_files, add_complex_requirements_in
 )
 from contextlib import ExitStack
 from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name, remove_file
+from chicken_turtle_project import specification as spec
 from pathlib import Path
 from configparser import ConfigParser
+from enum import IntEnum
 import plumbum as pb
 import itertools
 import pytest
 import re
 
+## Project file requirements ############################################
+Permission = IntEnum('Permission', 'none create update overwrite')
+
+class ProjectFileRequirement(object):
+    '''
+    Interface
+    
+    Attributes
+    ----------
+    permission : Permission
+        Max permission. I.e. lower permissions are included.
+    
+    Methods
+    -------
+    verify_default_content(file_content :: str, format_variables :: {str : any}) -> None
+        raises if the file content after being created from scratch or overwritten
+        is invalid. Only called if has 'create' permission.
+    verify_updated_content(updated_content :: str, original_content :: str, format_variables :: {str : any}) -> None
+        raises if the file content after being updated is invalid, e.g. if original
+        content is dropped entirely. Only called if has 'update' permission.
+        
+    Notes
+    -----
+    No need to inherit from this due to duck typing.
+    '''
+
+class _IniFileRequirement(object):
+    
+    '''
+    Require ini-like file to provide defaults and/or fix options at certain values
+    '''
+    
+    permission = Permission.update
+    
+    def __init__(self, defaults, overwrite):
+        self._defaults = defaults
+        self._overwritten = overwrite
+    
+    def _config(self, content):
+        config = ConfigParser()
+        config.read_string(content)
+        return config
+    
+    def verify_default_content(self, content, format_kwargs):
+        config = self._config(content)
+        
+        # defaults are included and have correct value
+        for section in self._defaults:
+            for option, value in self._defaults[section].items():
+                assert config.has_option(section, option)
+                assert config[section][option] == value.format(**format_kwargs)
+        
+        self._verify(content, format_kwargs)
+        
+    def verify_updated_content(self, updated_content, original_content, format_kwargs):
+        updated_config = self._config(updated_content)
+        original_config = self._config(original_content)
+        
+        # add missing required options
+        for section in self._defaults:
+            for option, value in self._defaults[section].items():
+                if not original_config.has_option(section, option):
+                    assert updated_config.has_option(section, option) 
+                    assert updated_config[section][option] == value.format(**format_kwargs)
+        
+        # carry over everything else from the original
+        for section in original_config:
+            for option in original_config[section]:
+                # allow overwrite in some
+                if section in self._overwritten and option in self._overwritten[section]:
+                    continue
+                
+                # but not these
+                assert updated_config.has_option(section, option)
+                assert updated_config[section][option] == original_config[section][option]
+        
+        self._verify(updated_content, format_kwargs)
+        
+    def _verify(self, content, format_kwargs):
+        config = self._config(content)
+        
+        # options to overwrite if their value differs from what it should be
+        for section in self._overwritten:
+            for option, value in self._overwritten[section].items():
+                assert config.has_option(section, option)
+                assert config[section][option] == value.format(**format_kwargs)
+                
+class _SnippetsRequirement(object):
+    
+    '''
+    Require file to contain given snippets, in any order, allowing overlap
+    '''
+    
+    def __init__(self, permission, snippets):
+        self.permission = permission
+        self._snippets = snippets
+    
+    def verify_default_content(self, content, format_kwargs):
+        self._verify(content, format_kwargs)
+        
+    def verify_updated_content(self, updated_content, original_content, format_kwargs):
+        assert self.permission >= Permission.update
+        assert original_content in updated_content
+        self._verify(updated_content, format_kwargs)
+    
+    def _verify(self, content, format_kwargs):
+        for snippet in self._snippets:
+            assert snippet.format(**format_kwargs) in content
+            
+class _NoRequirement(object):
+    
+    '''
+    Don't impose any additional requirements
+    '''
+    
+    def __init__(self, permission = Permission.none):
+        self.permission = permission
+        
+    def verify_default_content(self, content, format_variables):
+        pass
+        
+    def verify_updated_content(self, updated_content, original_content, format_variables):
+        pass
+
+#: Requirements of project files.
+#: 
+#: Each file should exist after a successful run of ct-mkproject. Not all have to
+#: be created by the user.
+project_file_requirements = {
+    Path('operation_mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
+    Path('operation_mittens/test/__init__.py') : _NoRequirement(Permission.create),
+    Path('operation_mittens/test/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
+#     Path('doc_src/conf.py') : 'create',
+#     Path('doc_src/Makefile') : 'create',
+    Path('requirements.in') : _SnippetsRequirement(Permission.update, {spec.requirements_in_header}),
+#     Path('dev_requirements.in') : _SnippetsRequirement(Permission.update, spec.dev_requirements_in),
+    Path('test_requirements.in') : _SnippetsRequirement(Permission.update, spec.test_requirements_in),
+    Path('requirements.txt') : _NoRequirement(Permission.overwrite), # tested elsewhere
+    Path('.gitignore') : _SnippetsRequirement(Permission.update, spec.gitignore_patterns),
+    Path('.coveragerc') : _IniFileRequirement(spec.coveragerc_defaults, spec.coveragerc_overwrite),
+    Path('setup.cfg') : _IniFileRequirement(spec.setup_cfg_defaults, spec.setup_cfg_overwrite),
+    Path('setup.py') : _SnippetsRequirement(Permission.overwrite, {spec.setup_py_header}),
+    Path('MANIFEST.in') : _SnippetsRequirement(Permission.update, spec.manifest_in),
+    Path('LICENSE.txt') : _NoRequirement(),
+    Path('README.md') : _NoRequirement(),
+    # project.py is tested elsewhere as it requires stdin to be created
+}
+
 ## setup, asserts, util #######################################
 
-file_permissions = {
-    Path('operation_mittens/__init__.py') : 'update',
-    Path('operation_mittens/test/__init__.py') : 'create',
-    Path('operation_mittens/test/conftest.py') : 'create',
-    Path('requirements.in') : 'create',
-    Path('test_requirements.in') : 'create',
-    Path('.coveragerc') : 'create',
-    Path('requirements.txt') : 'overwrite',
-    Path('.gitignore') : 'update',
-    Path('setup.cfg') : 'update',
-    Path('setup.py') : 'overwrite',
-    Path('LICENSE.txt') : 'none',
-    Path('README.md') : 'none'
-} 
-'''
-Maps regular files to their write permission.
-
-All files should exist after running ct-mkproject.
-
-Permissions (each permission level includes all the above, e.g. overwrite may also update and create):
-
-- none
-- create
-- update
-- overwrite 
-'''
-    
-def create_precommit_project():
-    '''
-    Create project tailored to precommit tests, i.e. mostly just required files
-    '''
-    write_project(project1)
-    write_file('requirements.in', requirements_in1)
-    write_file('LICENSE.txt', license_txt1)
-    write_file('README.md', readme1)
-    Path('operation_mittens').mkdir()
-    Path('operation_mittens/test').mkdir()
-    write_file('operation_mittens/test/test_one.py', test_one1)
-    git_('init')
-
-def is_subsequence(left, right):
+def is_subsequence(left, right): #TODO to CTU
     '''
     Get whether left is a subsequence of right, in the mathematical sense
     
@@ -74,321 +182,343 @@ def is_subsequence(left, right):
     
 ## tests ############################################
 
-
-def test_project_missing(tmpcwd):
-    '''
-    When project.py missing, ask for a name and generate template
-    '''
-    # When project.py is missing and git repo exists but has no commits
-    create_project()
-    remove_file(Path('project.py'))
-    (mkproject << project_defaults['name'] + '\n')()
+class TestFileRequirements(object):
     
-    # Then project.py is created and contains the defaults we want
-    project_py_path = Path('project.py')
-    assert project_py_path.exists()
-    project = eval_file(project_py_path)['project']
-    assert project == project_defaults
+    '''Drive tests specified by `project_file_requirements`'''
+    
+    @pytest.mark.parametrize('missing_path, missing_requirements', project_file_requirements.items())
+    def test_missing_file(self, tmpcwd, missing_path, missing_requirements):
+        '''
+        Test handling of missing files:
         
-def test_project_present(tmpcwd):
-    '''
-    When project.py exists, it is left alone.
+        - When files are missing, create them if allowed, error otherwise
+        - When files are present and may not be updated, they are left untouched
+        '''
+        create_project()
+        remove_file(missing_path)
+        if missing_requirements.permission == Permission.none:
+            # When can't create, must raise error
+            with assert_process_fails(stderr_matches=missing_path.name):
+                mkproject()
+        else:
+            # When can create, create
+            with ExitStack() as contexts:
+                for file, requirements in project_file_requirements.items():
+                    if missing_path != file and missing_path not in file.parents and requirements.permission <= Permission.create:
+                        contexts.enter_context(assert_file_access(file, written=False, contents_changed=False))
+                mkproject & pb.FG
+            assert missing_path.exists()
+            content = read_file(missing_path)
+            missing_requirements.verify_default_content(content, project1.format_kwargs)
+        
+    def test_update_file(self, tmpcwd):
+        '''
+        Test updates to files:
+        
+        - file is updated to match requirements
+        - file also still contains original contents
+        
+        Specifically:
+        
+        - $project_name/__init__.py: leaves all intact, just inserts/overwrites __version__
+        - .gitignore: leaves previous patterns intact, does insert the new patterns
+        - setup.cfg: leaves previous intact, except for some lines designated to be overwritten
+        - ...
+        '''
+        create_project(project1) # Note this template is such that each of the files will require an update
+        updated_files = [path for path, requirements in project_file_requirements.items() if requirements.permission == Permission.update]
+        with assert_file_access(*updated_files, written=True, contents_changed=True):
+            mkproject & pb.FG
+        
+        for path in updated_files:
+            requirements = project_file_requirements[path]
+            content = read_file(path)
+            requirements.verify_updated_content(content, project1.files[path], project1.format_kwargs)
+            
+    def test_overwrite_file(self, tmpcwd):
+        '''
+        Test file overwrites
+        '''
+        create_project(project1) # Note this template is such that each of the files that be overwritten will require an overwrite
+        overwritten_files = [path for path, requirements in project_file_requirements.items() if requirements.permission == Permission.overwrite]
+        with assert_file_access(*overwritten_files, written=True, contents_changed=True):
+            mkproject & pb.FG
+        
+        for path in overwritten_files:
+            requirements = project_file_requirements[path]
+            content = read_file(path)
+            requirements.verify_default_content(content, project1.format_kwargs)
     
-    When project lacks optional attributes, succeed.
-    '''
-    create_project()
-    with assert_file_access('project.py', contents_changed=False):
+class TestProjectPy(object):
+    
+    'Test project.py content (some of it is already covered by TestFileRequirements)'
+    
+    def test_new(self, tmpcwd):
+        '''
+        When project.py missing, ask for a name and generate template
+        '''
+        # When project.py is missing and git repo exists but has no commits
+        create_project()
+        remove_file(Path('project.py'))
+        (mkproject << project_defaults['name'] + '\n')() #TODO + project_defaults['human_friendly_name'] + '\n'
+        
+        # Then project.py is created and contains the defaults we want
+        project_py_path = Path('project.py')
+        assert project_py_path.exists()
+        assert read_file(project_py_path) == spec.project_py.format(**project1.format_kwargs)
+        assert eval_file(project_py_path)['project'] == project_defaults  # double-check
+            
+    def test_undefined(self, tmpcwd):
+        '''
+        When project.py does not define `project`, abort
+        '''
+        create_project()
+        write_file('project.py', '')
+        with assert_process_fails(stderr_matches='must export a `project` variable'):
+            mkproject()
+            
+    @pytest.mark.parametrize('required_attr', project1.project_py.keys())
+    def test_missing_required_attr(self, tmpcwd, required_attr):
+        '''
+        When `project` lacks a required attribute, abort
+        '''
+        project = project1.copy()
+        del project.project_py[required_attr]
+        create_project(project)
+        with assert_process_fails(stderr_matches='Missing.+{}'.format(required_attr)):
+            mkproject()
+            
+    @pytest.mark.parametrize('unknown_attr', 'version package_data packages long_description extras_require install_requires unknown'.split())
+    def test_has_unknown_attr(self, tmpcwd, unknown_attr):
+        '''
+        When `project` contains an unknown attribute, abort
+        '''
+        project = project1.copy()
+        project.project_py[unknown_attr] = 'value'
+        create_project(project)
+        with assert_process_fails(stderr_matches=unknown_attr):
+            mkproject()
+            
+    _parameters = set(itertools.product(project1.project_py.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
+    _parameters.add(('name', 'white space'))
+    
+    @pytest.mark.parametrize('attr,value', _parameters)
+    def test_attr_has_invalid_value(self, tmpcwd, attr, value):
+        '''
+        When '\s*' or None as attr values, abort
+        
+        When dashes or whitespace in name, abort
+        '''
+        project = project1.copy()
+        project.project_py[attr] = value
+        create_project(project)
+        with assert_process_fails(stderr_matches=attr):
+            mkproject()
+
+class TestSetupPyAndRequirementsTxt(object):
+
+    @pytest.mark.current
+    def test_setup_py(self, tmpcwd):
+        '''
+        Test generated setup.py and requirements.txt
+        
+        - install_requires: requirements.in transformed into valid dependency list with version specs maintained
+        - long_description present and nonempty
+        - classifiers: list of str
+        - packages: list of str of packages
+        - package_data: dict of package -> list of str of data file paths
+        - author, author_email, description, entry_points keywords license name, url: exact same as input
+        '''
+        project = project1.copy()
+        project.project_py['entry_points'] = project_defaults['entry_points']
+        add_complex_requirements_in(project)
+        project.files[Path('my_extra_requirements.in')] = 'checksumdir\npytest-pep8\n'
+        del project.files[Path('test_requirements.in')]
+        
+        # Create package_data in operation_mittens/test (it actually may be in non-test as well):
+        project.files[Path('operation_mittens/test/data/subdir/file1')] = ''
+        project.files[Path('operation_mittens/test/data/subdir/file2')] = ''
+        project.files[Path('operation_mittens/test/not_data/file')] = ''
+        project.files[Path('operation_mittens/test/not_data/data/file')] = ''
+        project.files[Path('operation_mittens/test/pkg/__init__.py')] = ''
+        project.files[Path('operation_mittens/test/pkg/data/file')] = ''
+        
+        #
+        create_project(project)
+        
+        # Run
         mkproject & pb.FG
         
-def test_project_undefined(tmpcwd):
-    '''
-    When project.py does not define `project`, abort
-    '''
-    create_project()
-    write_file('project.py', '')
-    with assert_process_fails(stderr_matches='must export a `project` variable'):
-        mkproject()
+        # Assert setup.py args
+        setup_args = get_setup_args()
         
-@pytest.mark.parametrize('required_attr', project1.keys())
-def test_project_missing_required_attr(tmpcwd, required_attr):
-    '''
-    When `project` lacks a required attribute, abort
-    '''
-    create_project()
-    project = project1.copy()
-    del project[required_attr]
-    write_project(project)
-    with assert_process_fails(stderr_matches='Missing.+{}'.format(required_attr)):
-        mkproject()
+        for attr in ('name', 'author', 'author_email', 'description', 'keywords', 'license', 'url'):
+            assert setup_args[attr] == project.project_py[attr].strip()
+        assert setup_args['entry_points'] == project.project_py['entry_points']
+            
+        assert setup_args['long_description'].strip()
+        assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
+        assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.test', 'operation_mittens.test.pkg']
+        assert {k:set(v) for k,v in setup_args['package_data'].items()} == {
+            'operation_mittens.test' : {'operation_mittens/test/data/subdir/file1', 'operation_mittens/test/data/subdir/file2'},
+            'operation_mittens.test.pkg' : {'operation_mittens/test/pkg/data/file'},
+        }
+        assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
+        assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test', 'dev'}
+        assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
+        assert set(setup_args['extras_require']['test']) == set(spec.test_requirements_in)
+        assert setup_args['version'] == '0.0.0'
+        assert 'download_url' not in setup_args
         
-@pytest.mark.parametrize('unknown_attr', 'version package_data packages long_description extras_require install_requires unknown'.split())
-def test_project_has_unknown_attr(tmpcwd, unknown_attr):
-    '''
-    When `project` contains an unknown attribute, abort
-    '''
-    create_project()
-    project = project1.copy()
-    project[unknown_attr] = 'value'
-    write_project(project)
-    with assert_process_fails(stderr_matches=unknown_attr):
-        mkproject()
+        # requirements.txt must contain relevant packages, including optional dependencies
+        requirements_txt_content = read_file('requirements.txt')
+        for name in {'pytest', 'pytest-xdist', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'} | set(spec.test_requirements_in): #TODO | set(spec.dev_requirements_in:)
+            assert name in requirements_txt_content
+             
+        # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
+        deps_txt = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
+        for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
+            deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(path) if line[1]]
+            assert is_subsequence(deps_in, deps_txt)
+            
+    def test_sip_dependency(self, tmpcwd):
+        '''
+        When sip based dependency, do not put it in setup.py or requirements.txt
+        '''
+        project = project1.copy()
+        project.files[Path('requirements.in')] = 'pytest\nsip==4.17\nPyQt5==5.5.1\n'
+        create_project(project)
         
-_parameters = set(itertools.product(project1.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
-_parameters.add(('name', 'white space'))
-
-@pytest.mark.parametrize('attr,value', _parameters)
-def test_project_attr_has_invalid_value(tmpcwd, attr, value):
-    '''
-    When '\s*' or None as attr values, abort
+        mkproject & pb.FG
+        
+        setup_args = get_setup_args()
+        assert setup_args['install_requires'] == ['pytest']
+        
+        requirements_txt = read_file('requirements.txt')
+        assert 'sip' not in requirements_txt
+        assert not re.match('(?i)pyqt5', requirements_txt)
+        
+    def test_unpinned_sip_dependency(self, tmpcwd):
+        '''
+        When sip based dependency is not pinned, error
+        '''
+        project = project1.copy()
+        project.files[Path('requirements.in')] = 'pytest\nPyQt5\n'
+        create_project(project)
+        
+        with assert_process_fails(stderr_matches=r"(?i)'PyQt5' .* pin"):
+            mkproject()
     
-    When dashes or whitespace in name, abort
-    '''
-    create_project()
-    project = project1.copy()
-    project[attr] = value
-    write_project(project)
-    with assert_process_fails(stderr_matches=attr):
-        mkproject()
+class TestPrecommit(object):
     
+    def create_project(self):
+        project = project1.copy()
+        test_succeed_path = Path('operation_mittens/test/test_succeed.py')
+        project.files = {
+            Path('requirements.in'): project.files[Path('requirements.in')],  
+            Path('LICENSE.txt'): project.files[Path('LICENSE.txt')],
+            Path('README.md'): project.files[Path('README.md')],
+            test_succeed_path: extra_files[test_succeed_path],
+        }
+        create_project(project)
+    
+    def test_invalid_project(self, tmpcwd):
+        '''
+        Invalid project cancels the commit
+        '''
+        self.create_project()
+        mkproject & pb.FG  # install pre-commit hook
+        remove_file(Path('README.md'))
+        git_('add', '.')
+        with assert_process_fails(stderr_matches='(?i)error'):
+            git_('commit', '-m', 'message')  # runs the hook
+            
+    def test_ignore_unstaged(self, tmpcwd):
+        '''
+        Pre-commit must ignore unstaged changes
+        '''
+        self.create_project()
+        git_('add', '.')
+        mkproject & pb.FG  # install pre-commit hook
+        remove_file(Path('README.md'))
+        git_('commit', '-m', 'message')  # This fails if unstaged change is included
+        
+    def test_ignore_untracked(self, tmpcwd):
+        '''
+        Pre-commit must ignore untracked changes
+        '''
+        self.create_project()
+        git_('add', '.')
+        mkproject & pb.FG  # install pre-commit hook
+        test_fail_path = Path('operation_mittens/test/test_fail.py')
+        write_file(test_fail_path, extra_files[test_fail_path])
+        git_('commit', '-m', 'message')  # This fails if the untracked test is included
+         
+    def test_include_changes(self, tmpcwd):
+        '''
+        Changes made by mkproject must be staged, especially during precommit
+        '''
+        self.create_project()
+        mkproject & pb.FG  # install pre-commit hook
+        write_file('requirements.in', 'pytest')
+        git_('add', '.')
+        git_('commit', '-m', 'message')  # runs the hook, which calls ct-mkproject, which changes setup.py in this case
+        
+        # Expected change happened and is part of the commit
+        git_('reset', '--hard')
+        assert get_setup_args()['install_requires'] == ['pytest']
+    
+# class TestDocumentation(object):
+#     
+#     def test_documentation(self, tmpcwd):
+#         '''When happy days and a file with proper docstring, generate ./doc'''
+#         assert False
+#         # TODO: index.html contains:
+#         # correct version
+#         # human friendly project name
+#         # the docstring of the project
+#         
+#         # impl TODO
+#         # build doc on each commit
+#         # Code conf.py such that it fetches project.__version__ as the version
+#         # doc_src/conf.py <-- human friendly project name, e.g. 'Chicken Turtle Util'. refer to api in toc
+#         # doc_src/... (create along with conf.py) (you'll have to copy paste the rest of the tree, perhaps dotfiles too)
+#         '''
+#         project_root$ rm doc_src/api
+#         project_root$ sphinx-apidoc -o doc_src/api chicken_turtle_util chicken_turtle_util/test
+#         $ cd doc_src
+#         $ make html
+#         $ mv _build/html ../doc
+#         '''
+#             
+#     def test_documentation_error(self, tmpcwd):
+#         '''When a docstring contains an error, exit non-zero'''
+#         assert False
+        
 def test_idempotent(tmpcwd):
     '''
-    Running mkproject twice is the same as running it once, in any case
+    Running ct-mkproject twice is the same as running it once, in any case
     '''
     create_project()
-    mkproject()
+    mkproject & pb.FG
     with assert_directory_contents(Path('.'), changed=False):
         mkproject()
 
-@pytest.mark.parametrize('missing', files_create_project)
-def test_missing_files(tmpcwd, missing):
-    '''
-    When files are missing, create them if allowed, error otherwise
-
-    While files are present and may not be updated, they are left untouched
-    '''
-    create_project()
-    missing_is_dir = missing.is_dir()
-    remove_file(missing)
-    if not missing_is_dir and file_permissions[missing] == 'none':
-        # When can't create, must raise error
-        with assert_process_fails(stderr_matches=missing.name):
-            mkproject()
-    else:
-        # When can create, create
-        with ExitStack() as contexts:
-            for file, permission in file_permissions.items():
-                if missing != file and missing not in file.parents and permission not in ('update', 'overwrite'):
-                    contexts.enter_context(assert_file_access(file, written=False, contents_changed=False))
-            mkproject()
-        assert missing.exists()
-    # TODO deploy_local is not created, and just py.test until the rest works
-    
 @pytest.mark.parametrize('name', ('readme.md', 'README.MD', 'REEEADMEE.md'))
 def test_wrong_readme_file_name(tmpcwd, name):
-    '''
-    When files are missing, create them if allowed, error otherwise
-
-    While files are present and may not be updated, they are left untouched
-    '''
-    create_project()
     project = project1.copy()
-    project['readme_file'] = name
-    write_project(project)
+    project.project_py['readme_file'] = name
+    create_project(project)
     Path(name).touch()
     
     with assert_process_fails(stderr_matches='readme_file'):
         mkproject()
-    
-def test_updates(tmpcwd):
-    '''
-    When updating a file but not allowed to overwrite, leave the rest of it intact.
-    
-    - $project_name/__init__.py: leaves all intact, just inserts/overwrites __version__
-    - .gitignore: leaves previous patterns intact, does insert the new patterns
-    - setup.cfg: leaves previous intact, except for some lines designated to be overwritten
-    '''
-    create_project() # Note this template is such that each of the files will require an update
-    updated_files = ('operation_mittens/__init__.py', '.gitignore', 'setup.cfg')
-    with assert_file_access(*updated_files, written=True, contents_changed=True):
-        mkproject()
-    
-    content = read_file('operation_mittens/__init__.py')
-    assert pkg_init1 in content
-    assert '__version__ =' in content
-    
-    content = read_file('.gitignore')
-    assert gitignore1 in content
-    assert '*.egg-info' in content  # check 1 of the patterns is in there, though they should all be in there
-    
-    config = ConfigParser()
-    config.read('setup.cfg')
-    assert config['pytest']['addopts'].strip() == '--basetemp=last_test_runs --maxfail=2'  # unchanged
-    assert config['pytest']['testpaths'] == 'operation_mittens/test'  # overwritten
-    assert config['pytest']['env'] == 'PYTHONHASHSEED=0'  # created (would be unchanged if present)
-    assert config['metadata']['description-file'] == 'README.md'  # overwritten
-    assert config['other']['mittens_says'] == 'meow'  # unchanged
 
-def test_defaults(tmpcwd):
-    '''
-    When given a minimal project, add the correct defaults
-    '''
-    create_project()
-    remove_file(Path('setup.cfg'))
-    remove_file(Path('.coveragerc'))
-    
-    mkproject()
-    
-    # setup.cfg
-    config = ConfigParser()
-    config.read('setup.cfg')
-    assert config['pytest']['addopts'] == '\n--basetemp=last_test_runs\n--cov-config=.coveragerc\n--testmon\n--maxfail=1'
-    
-    # .coveragerc
-    assert read_file('.coveragerc') == '[run]\nomit = operation_mittens/test/*\n'
-    
-    # Part of the rest is covered by `test_updates`
-    
-def test_setup_py(tmpcwd):
-    '''
-    Test generated setup.py and requirements.txt
-    
-    - install_requires: requirements.in transformed into valid dependency list with version specs maintained
-    - long_description present and nonempty
-    - classifiers: list of str
-    - packages: list of str of packages
-    - package_data: dict of package -> list of str of data file paths
-    - author, author_email, description, entry_points keywords license name, url: exact same as input
-    '''
-    create_project()
-    project = project1.copy()
-    project['entry_points'] = project_defaults['entry_points']
-    write_project(project)
-    write_complex_requirements_in()
-    write_file('my_extra_requirements.in', 'checksumdir\npytest-pep8\n')
-    remove_file(Path('test_requirements.in'))
-    
-    # Create package_data in operation_mittens/test (it actually may be in non-test as well):
-    Path('operation_mittens/test/data').mkdir()
-    Path('operation_mittens/test/data/subdir').mkdir()
-    Path('operation_mittens/test/data/subdir/file1').touch()
-    Path('operation_mittens/test/data/subdir/file2').touch()
-    Path('operation_mittens/test/not_data').mkdir()
-    Path('operation_mittens/test/not_data/file').touch()
-    Path('operation_mittens/test/not_data/data').mkdir()
-    Path('operation_mittens/test/not_data/data/file').touch()
-    Path('operation_mittens/test/pkg').mkdir()
-    Path('operation_mittens/test/pkg/__init__.py').touch()
-    Path('operation_mittens/test/pkg/data').mkdir()
-    Path('operation_mittens/test/pkg/data/file').touch()
-    
-    # Run
-    mkproject & pb.FG
-    
-    # Assert all the things
-    setup_args = get_setup_args()
-    
-    for attr in ('name', 'author', 'author_email', 'description', 'keywords', 'license', 'url'):
-        assert setup_args[attr] == project[attr].strip()
-    assert setup_args['entry_points'] == project['entry_points']
-        
-    assert setup_args['long_description'].strip()
-    assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
-    assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.test', 'operation_mittens.test.pkg']
-    assert {k:set(v) for k,v in setup_args['package_data'].items()} == {
-        'operation_mittens.test' : {'operation_mittens/test/data/subdir/file1', 'operation_mittens/test/data/subdir/file2'},
-        'operation_mittens.test.pkg' : {'operation_mittens/test/pkg/data/file'},
-    }
-    assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
-    assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test'}
-    assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
-    assert set(setup_args['extras_require']['test']) == {'pytest', 'pytest-env', 'pytest-testmon', 'pytest-cov', 'coverage_pth'}
-    assert setup_args['version'] == '0.0.0'
-    assert 'download_url' not in setup_args
-    
-    # requirements.txt must contain relevant packages, including optional dependencies
-    requirements_txt_content = read_file('requirements.txt')
-    for name in ('pytest', 'pytest-xdist', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'):
-        assert name in requirements_txt_content
-         
-    # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
-    deps_txt = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
-    for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
-        deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(path) if line[1]]
-        assert is_subsequence(deps_in, deps_txt)
-        
-def test_sip_dependency(tmpcwd):
-    '''
-    When sip based dependency, do not put it in setup.py or requirements.txt
-    '''
-    create_project()
-    write_file('requirements.in', 'pytest\nsip==4.17\nPyQt5==5.5.1\n')
-    
-    mkproject & pb.FG
-    
-    setup_args = get_setup_args()
-    assert setup_args['install_requires'] == ['pytest']
-    
-    requirements_txt = read_file('requirements.txt')
-    assert 'sip' not in requirements_txt
-    assert not re.match('(?i)pyqt5', requirements_txt)
-    
-def test_unpinned_sip_dependency(tmpcwd):
-    '''
-    When sip based dependency is not pinned, error
-    '''
-    create_project()
-    write_file('requirements.in', 'pytest\nPyQt5\n')
-    
-    with assert_process_fails(stderr_matches=r"(?i)'PyQt5' .* pin"):
-        mkproject()
-    
-def test_precommit_invalid(tmpcwd):
-    '''
-    Invalid project cancels the commit
-    '''
-    create_precommit_project()
-    mkproject()  # install pre-commit hook
-    remove_file(Path('README.md'))
-    git_('add', '.')
-    with assert_process_fails(stderr_matches='(?i)error'):
-        git_('commit', '-m', 'message')  # runs the hook
-        
-def test_precommit_ignore_unstaged(tmpcwd):
-    '''
-    Pre-commit must ignore unstaged changes
-    '''
-    create_precommit_project()
-    git_('add', '.')
-    mkproject()  # install pre-commit hook
-    remove_file(Path('README.md'))
-    git_('commit', '-m', 'message')  # This fails if unstaged change is included
-    
-def test_precommit_ignore_untracked(tmpcwd):
-    '''
-    Pre-commit must ignore untracked changes
-    '''
-    create_precommit_project()
-    git_('add', '.')
-    mkproject()  # install pre-commit hook
-    write_file(Path('operation_mittens/test/test_fail.py'), test_fail1)
-    git_('commit', '-m', 'message')  # This fails if the untracked test is included
-     
-def test_precommit_include_changes(tmpcwd):
-    '''
-    Changes made by mkproject must be staged, especially during precommit
-    '''
-    create_precommit_project()
-    mkproject()  # install pre-commit hook
-    write_file('requirements.in', 'pytest')
-    git_('add', '.')
-    git_('commit', '-m', 'message')  # runs the hook, which calls ct-mkproject, which changes setup.py in this case
-    
-    # Expected change happened and is part of the commit
-    git_('reset', '--hard')
-    assert get_setup_args()['install_requires'] == ['pytest']
-            
+# TODO use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
 '''
 TODO
+
+testmon seems to fail to detect changes correctly, should probably do an --testmon-off -n auto in pre-commit to make sure it's really fine. 
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 

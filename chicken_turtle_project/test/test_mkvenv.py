@@ -3,12 +3,14 @@ ct-mkvenv tests
 '''
 
 from chicken_turtle_project.test.common import (
-    create_project, reset_logging, write_file, project1, write_project
+    create_project, reset_logging, project1
 )
 from chicken_turtle_project.mkvenv import main as _mkvenv
+from click.testing import CliRunner
+from textwrap import dedent
+from pathlib import Path
 import plumbum as pb
 import pytest
-from click.testing import CliRunner
 
 # TODO this is copy paste from `release`
 def mkvenv(*args, **invoke_kwargs):
@@ -18,33 +20,28 @@ def mkvenv(*args, **invoke_kwargs):
     result = CliRunner().invoke(_mkvenv, args, **invoke_kwargs)
     reset_logging()
     assert (result.exit_code == 0) == (result.exception is None or (isinstance(result.exception, SystemExit) and result.exception.code == 0))
-    return result
-
-main_py_template = '''
-import pytest
-import PyQt5
-
-def main():
-    print('meow')
-''' 
+    return result 
 
 @pytest.mark.long  # Note: takes a while to run due to compiling PyQt5
 def test_sip_install(tmpcwd):
     '''
     When SIP dependencies, install them correctly
     '''
-    create_project()
-    
     project = project1.copy()
-    project['entry_points'] = {
+    project.project_py['entry_points'] = {
         'console_scripts': [
             'mycli = operation_mittens.main:main',
         ],
     }
-    write_project(project)
-    
-    write_file('requirements.in', 'pytest\nsip==4.17\nPyQt5==5.5.1\n')
-    write_file('operation_mittens/main.py', main_py_template)
+    project.files[Path('requirements.in')] = 'pytest\nsip==4.17\nPyQt5==5.5.1\n'
+    project.files[Path('operation_mittens/main.py')] = dedent('''\
+        import pytest
+        import PyQt5
+        
+        def main():
+            print('meow')
+        ''')
+    create_project(project)
     
     pb.local['ct-mkproject']()
     
@@ -52,7 +49,7 @@ def test_sip_install(tmpcwd):
     result = mkvenv()
     assert result.exit_code == 0, result.output
     
-    # When call mycli, all good  
+    # When call mycli, all good
     stdout = pb.local['venv/bin/mycli']()
     assert 'meow' in stdout
     

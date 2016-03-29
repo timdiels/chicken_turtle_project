@@ -5,18 +5,22 @@ common test setup, assertions and utilities
 from chicken_turtle_project.common import eval_string
 from contextlib import contextmanager
 from checksumdir import dirhash
+from textwrap import dedent
 from pathlib import Path
 import plumbum as pb
 import logging
 import pytest
 import pprint
 import re
+import os
 
 mkproject = pb.local['ct-mkproject']
 git_ = pb.local['git']
 
+# When a project is created from scratch, these should be the project.py defaults
 project_defaults = dict(
     name='operation-mittens',
+#     human_friendly_name='Operation Mittens',
     description='Short description',
     author='your name',
     author_email='your_email@example.com',
@@ -66,11 +70,22 @@ project_defaults = dict(
     },
 )
 
-# non-default minimal project description
-project1 = project_defaults.copy()
-del project1['entry_points']
-del project1['index_test']
-project1.update(
+# Project templates
+class Project(object):
+    
+    def __init__(self, project_py, format_kwargs, files):
+        self.project_py = project_py
+        self.format_kwargs = format_kwargs
+        self.files = files  # all files excluding project.py
+        
+    def copy(self):
+        return Project(dict(self.project_py), dict(self.format_kwargs), dict(self.files))
+
+# Project 1
+_project_py = project_defaults.copy()
+del _project_py['entry_points']
+del _project_py['index_test']
+_project_py.update(
     author='mittens',
     author_email='mittens@test.com',
     url='https://test.com/project/home',
@@ -78,45 +93,68 @@ project1.update(
     classifiers='  Development Status :: 2 - Pre-Alpha\nProgramming Language :: Python :: Implementation :: Stackless\n\n'
 )
 
-# file templates
-gitignore1 = 'pattern1\npattern2'
-pkg_init1 = '# pkg init'
-test_init1 = '# test init'
-requirements_in1 = 'pytest\nchecksumdir'
-test_requirements_in1 = 'pytest-pep8\npytest-cov'
-license_txt1 = 'license'
-readme1 = 'readme'
-setup_cfg1 = '''
-[pytest]
-addopts = --basetemp=last_test_runs --maxfail=2
-testpaths = bork
+_format_kwargs = {
+    'name': 'operation-mittens',
+    'pkg_name': 'operation_mittens',
+    'version': '0.0.0',
+    'readme_file': 'README.md',
+}
 
-[metadata]
-description-file = bork
+_project_files = {
+    Path('.gitignore'): 'pattern1\npattern2',
+    Path('.coveragerc'): '# mittens coverage_rc',
+    Path('operation_mittens/__init__.py'): '# mittens pkg init',
+    Path('operation_mittens/test/__init__.py'): '# mittens test init',
+    Path('operation_mittens/test/conftest.py'): '# mittens conftest',
+    Path('requirements.in'): 'pytest\nchecksumdir',
+    Path('dev_requirements.in'): '# mittens dev_requirements',
+    Path('test_requirements.in'): 'pytest-pep8',
+    Path('requirements.txt'): '# mittens requirements.txt',
+    Path('LICENSE.txt'): 'mittens license',
+    Path('README.md'): 'mittens readme',
+    Path('MANIFEST.in'): '# mittens manifest',
+    Path('setup.cfg'): dedent('''\
+        [pytest]
+        addopts = --basetemp=last_test_runs --maxfail=2
+        testpaths = bork
+        
+        [metadata]
+        description-file = bork
+        
+        [other]
+        mittens_says = meow
+        '''),
+    Path('setup.py'): '# mittens setup.py',
+    Path('doc_src/conf.py'): '# mittens conf.py',
+    Path('doc_src/Makefile'): dedent('''\
+        all:
+            true
+        '''),
+} 
 
-[other]
-mittens_says = meow
-'''
+#: project with all required, optional, generated files already present.
+#:
+#: Each updatable file lacks all required content, and has some other content. When
+#: the required content is merged in, the project is valid.
+project1 = Project(_project_py, _format_kwargs, _project_files) 
 
-conftest_py1 = '''
-# ours
-'''
-
-test_one1 = '''
-def test_one():
-    pass
-'''
-
-test_fail1 = '''
-def test_fail():
-    assert False
-'''
+# Extra files (handy to include in some tests)
+extra_files = {
+    Path('operation_mittens/test/test_succeed.py'): dedent('''\
+        def test_succeed():
+            pass
+        '''),
+    Path('operation_mittens/test/test_fail.py'): dedent('''\
+        def test_fail():
+            assert False
+        ''')
+}
 
 ## util ######################
 
 # Reusable outside testing too
 
-def write_file(path, contents):
+def write_file(path, contents): # TODO to CTU: path.write. Consider making our class Path(pathlib.Path)
     with Path(path).open('w') as f:
         f.write(contents)
         
@@ -154,59 +192,33 @@ def file_hash(path):
 
 ## setup util ###########################################
 
-def create_project():
+def create_project(project=project1):
     '''
-    Create all required, optional and generated files for ct-mkproject based on `project1`, and init git but leave everything untracked
+    Create project 1 with all required, optional and generated files for ct-mkproject, and init git but leave everything untracked
     '''
-    write_project(project1)
-    path = Path('operation_mittens')
-    path.mkdir()
-    write_file(path / '__init__.py', pkg_init1)
-    path /= 'test'
-    path.mkdir()
-    write_file(path / '__init__.py', test_init1)
-    write_file(path / 'conftest.py', conftest_py1)
-    write_file('requirements.in', requirements_in1)
-    write_file('test_requirements.in', test_requirements_in1)
-    write_file('.gitignore', gitignore1)
-    write_file('LICENSE.txt', license_txt1)
-    write_file('setup.cfg', setup_cfg1)
-    write_file('setup.py', 'bork')
-    write_file('README.md', readme1)
-    write_file('.coveragerc', '')
+    write_file(Path('project.py'), 'project = ' + pprint.pformat(project.project_py))
+    for path, content in  project.files.items():
+        os.makedirs(str(path.parent), exist_ok=True)
+        write_file(path, content)
     git_('init')
     
-files_create_project = {Path(file) for file in 'operation_mittens operation_mittens/test operation_mittens/__init__.py operation_mittens/test/__init__.py operation_mittens/test/conftest.py requirements.in test_requirements.in .gitignore setup.cfg setup.py LICENSE.txt README.md .coveragerc'.split()}
-'''files created by create_project'''
+def add_complex_requirements_in(project):
+    project.files[Path('requirements.in')] = dedent('''\
+        
+        # line-comment
+        pytest  # in-line comment
+        pytest-xdist<5.0.0 # version
+        # more comment
+        pytest-env==0.6
+        -e ./pkg_magic
+             
+        pytest-cov
 
-def write_project(project):
-    write_file('project.py', 'project = ' + pprint.pformat(project))
-    
-
-_requirements_in_difficult_template = '''
-# line-comment
-pytest  # in-line comment
-pytest-xdist<5.0.0 # version
-# more comment
-pytest-env==0.6
--e ./pkg_magic
-     
-pytest-cov
-
-'''
-
-_pkg_magic_setup_py_template = '''
-from setuptools import setup
-setup(name='pkg4')
-'''
-
-def write_complex_requirements_in():
-    '''
-    Write requirements.in with -e deps and comments
-    '''
-    write_file('requirements.in', _requirements_in_difficult_template)
-    Path('pkg_magic').mkdir()
-    write_file('pkg_magic/setup.py', _pkg_magic_setup_py_template)
+        ''')
+    project.files[Path('pkg_magic/setup.py')] = dedent('''\
+        from setuptools import setup
+        setup(name='pkg4')
+        ''')
     
 def reset_logging(): # TODO add to CTU
     '''

@@ -3,9 +3,8 @@ ct-release tests
 '''
 
 from chicken_turtle_project.test.common import (
-    create_project, git_, mkproject, project1, write_project, 
-    test_one1, write_file, get_setup_args, write_complex_requirements_in, test_fail1,
-    reset_logging
+    create_project, git_, mkproject, project1, get_setup_args, extra_files,
+    reset_logging, write_file, add_complex_requirements_in
 )
 from chicken_turtle_project.release import main as release_
 from pathlib import Path
@@ -32,16 +31,17 @@ def mocked_release(mocker):
 
 ## util ##########################
  
-def create_release_project(test_index=True):
+def create_release_project(project=project1, test_index=True):
     '''
     Create valid project for release
     '''
-    create_project()
-    write_file('operation_mittens/test/test_one.py', test_one1)
+    project = project.copy()
+    test_succeed_path = Path('operation_mittens/test/test_succeed.py')
+    project.files[test_succeed_path] = extra_files[test_succeed_path] 
     if test_index:
-        project = project1.copy()
-        project['index_test'] = 'pypitest'
-        write_project(project)
+        project.project_py['index_test'] = 'pypitest'
+    create_project(project)
+    
     git_('add', '.')
     mkproject()
     git_('commit', '-m', 'Initial commit')
@@ -75,7 +75,8 @@ def test_ignore_untracked(tmpcwd):
     When working directory is dirty, ignore untracked files
     '''
     create_release_project()
-    write_file(Path('operation_mittens/test/test_fail.py'), test_fail1)
+    test_fail_path = Path('operation_mittens/test/test_fail.py')
+    write_file(test_fail_path, extra_files[test_fail_path])
     result = release('--project-version', '1.0.0')
     assert result.exit_code == 0
 
@@ -171,8 +172,9 @@ def test_editable_requirements(tmpcwd):
     '''
     When requirements.txt contains editable dependencies (-e), error
     '''
-    create_release_project()
-    write_complex_requirements_in()
+    project = project1.copy()
+    add_complex_requirements_in(project)
+    create_release_project(project)
     git_('add', '.')
     git_('commit', '-m', 'message')
     result = release('--project-version', '1.0.0')
