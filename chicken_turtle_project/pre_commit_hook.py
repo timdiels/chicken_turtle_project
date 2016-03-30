@@ -35,7 +35,6 @@ def main():
                 GIT_DIR=str(_get_abs_path_from_env('GIT_DIR')),
                 GIT_INDEX_FILE=str(_get_abs_path_from_env('GIT_INDEX_FILE')),
                 CT_VENV_DIR=str(venv_dir),
-                CT_PRE_COMMIT='true'
             ) 
             with env_context, pb.local.cwd(str(temp_dir)):
                 # Check documentation for errors (which also updates the venv, which we rely on)

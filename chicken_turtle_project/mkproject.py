@@ -78,18 +78,13 @@ def toset_from_tosets(*tosets):
 
 @click.command()
 @cli.option(
-    '--pre-commit/--no-pre-commit',
-    default=False, is_flag=True,
-    help='Internal option, do not use.'
-)
-@cli.option(
     '--project-version',
     default=_dummy_version,
     envvar='CT_PROJECT_VERSION',
     help='Internal option, do not use.'
 )
 @click.version_option(version=__version__)
-def _main(pre_commit, project_version):
+def _main(project_version):
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
