@@ -19,6 +19,7 @@ def main():
     '''
     init_logging()
     with graceful_main(logger):
+        venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
         project_root = Path.cwd()
         project = get_project(project_root)
         pkg_root = get_pkg_root(project_root, project['name'])
@@ -27,8 +28,9 @@ def main():
         remove_file(doc_root / 'api')
         remove_file(doc_root / 'build')
         kwargs = dict(
+            venv_activate=venv_dir / 'bin/activate',
             doc_root=doc_root,
             pkg_name=pkg_root.name,
             pkg_root=pkg_root
         )
-        pb.local['sh']('-c', '. venv/bin/activate && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_root}/test && cd {doc_root} && make html'.format(**kwargs))
+        pb.local['sh']('-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_root}/test && cd {doc_root} && make html'.format(**kwargs))

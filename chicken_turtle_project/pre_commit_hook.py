@@ -1,6 +1,5 @@
 from chicken_turtle_project.common import remove_file, init_logging, graceful_main
 from chicken_turtle_project import __version__
-from chicken_turtle_util import cli
 from pathlib import Path
 import plumbum as pb
 import click
@@ -31,33 +30,28 @@ def main():
                 git_('checkout-index', '-a', '-f', '--prefix', str(temp_dir) + '/')
             
             project_root = _get_abs_path_from_env('GIT_WORKING_TREE')
+            venv_dir = Path(pb.local.env.get('CT_VENV_DIR', str(project_root / 'venv'))).absolute()
             env_context = pb.local.env(
                 GIT_DIR=str(_get_abs_path_from_env('GIT_DIR')),
                 GIT_INDEX_FILE=str(_get_abs_path_from_env('GIT_INDEX_FILE')),
+                CT_VENV_DIR=str(venv_dir),
             ) 
             with env_context, pb.local.cwd(str(temp_dir)):
-                # Reuse dev venv, if any
-                venv_dir = project_root / 'venv'
-                if venv_dir.exists():
-                    # TODO symlinking isn't sufficient as the venv uses abs paths, e.g. it would install scripts with an abs path referring to the symlink path which will disappear
-                    # We need a CT_VENV_DIR, defaulting to ./venv
-                    Path(venv_dir.name).symlink_to(venv_dir, target_is_directory=True)
-                    
                 # Update project
                 pb.local['ct-mkproject']['--pre-commit'] & pb.FG
-                
-                # Forget about Git and Chicken Turtle environment
-                bad_env_vars = [k for k in pb.local.env.keys() if k.startswith('GIT_') or k.startswith('CT_')]
-                for name in bad_env_vars:
-                    del pb.local.env[name]
                 
                 pb.local['ct-mkvenv'] & pb.FG
                 
                 # Check documentation for errors
                 pb.local['ct-mkdoc'] & pb.FG
                 
+                # Forget about Git and Chicken Turtle environment before running tests
+                bad_env_vars = [k for k in pb.local.env.keys() if k.startswith('GIT_') or k.startswith('CT_')]
+                for name in bad_env_vars:
+                    del pb.local.env[name]
+
                 # Run tests
-                pb.local['venv/bin/py.test'] & pb.FG(retcode=(0,5))
+                pb.local[str(venv_dir / 'bin/py.test')] & pb.FG(retcode=(0,5))
             
         finally:
             remove_file(temp_dir)

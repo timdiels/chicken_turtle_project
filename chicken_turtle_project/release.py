@@ -51,7 +51,7 @@ def main(project_version):
     want these, commit them first.
     '''
     init_logging()
-    with graceful_main(logger):
+    with graceful_main(logger):       
         # Note: The pre-commit hook already does most of the project validation
         repo = get_repo(Path.cwd())
         

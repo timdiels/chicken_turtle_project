@@ -67,8 +67,7 @@ def test_ignore_staged(tmpcwd):
     write_file(Path('project.py'), '')  # Invalid project.py
     git_('add', 'project.py')
     result = release('--project-version', '1.0.0')
-    print(result.output)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     
 def test_ignore_untracked(tmpcwd):
     '''
@@ -78,7 +77,7 @@ def test_ignore_untracked(tmpcwd):
     test_fail_path = Path('operation_mittens/test/test_fail.py')
     write_file(test_fail_path, extra_files[test_fail_path])
     result = release('--project-version', '1.0.0')
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
 def test_ignore_unstaged(tmpcwd):
     '''
@@ -87,8 +86,7 @@ def test_ignore_unstaged(tmpcwd):
     create_release_project()
     write_file(Path('project.py'), '')  # Invalid project.py
     result = release('--project-version', '1.0.0')
-    print(result.output)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
 def test_happy_days(tmpcwd, mocked_release):
     '''
@@ -97,7 +95,7 @@ def test_happy_days(tmpcwd, mocked_release):
     create_release_project()
     result = release('--project-version', '1.0.0')
     git_('reset', '--hard')
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert mocked_release.call_args_list == [(('pypitest',),), (('pypi',),)]
     assert git_('tag').strip() == 'v1.0.0'
     setup_args = get_setup_args()
@@ -119,11 +117,9 @@ def test_no_reuse_versions(tmpcwd):
     '''
     create_release_project()
     result = release('--project-version', '1.0.0')
-    assert result.exit_code == 0
-    print(result.output)
+    assert result.exit_code == 0, result.output
     result = release('--project-version', '1.0.0')
-    print(result.output)
-    assert result.exit_code != 0
+    assert result.exit_code != 0, result.output
     assert 'version has been released before' in result.output
         
 def test_older_than_ancestor(tmpcwd):
@@ -138,7 +134,7 @@ def test_older_than_ancestor(tmpcwd):
     git_('tag', 'v0.5.0')
     
     result = release('--project-version', '1.0.0', input='y\n')
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert '2.0.0' in result.output
     assert 'less than' in result.output
     assert 'Do you want to' in result.output
@@ -163,7 +159,7 @@ def test_older_than_other_branch(tmpcwd):
     git_('tag', 'v0.8.0')
     
     result = release('--project-version', '1.0.0')
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert 'v2.0.0' not in result.output
     assert 'less than' not in result.output
     assert 'Do you want to' not in result.output

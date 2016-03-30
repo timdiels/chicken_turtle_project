@@ -22,11 +22,6 @@ class SIPDependency(_SIPDependency):
             return self.name == str(other).lower()
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
-# @cli.option(
-#     '-e', '--editable',
-#     type=bool, is_flag=True, default=False,
-#     help='Install project in editable mode (i.e. `pip install -e`)'
-# )
 @click.version_option(version=__version__)
 def main():
     '''
@@ -46,9 +41,11 @@ def main():
     
 def _main():
     project_root = Path.cwd()
+    venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
+    print(venv_dir)
     
     # Create venv if missing
-    if not Path('venv').exists():
+    if not venv_dir.exists():
         # Find the desired Python
         desired_python = 'python3.4'
         python = pb.local.get(desired_python, 'python3', 'python')
@@ -57,14 +54,15 @@ def _main():
         
         # Create venv    
         logger.info('Creating venv')
-        python('-m', 'venv', 'venv')
+        python('-m', 'venv', str(venv_dir))
         
-    python = pb.local['venv/bin/python']
+    python = pb.local[str(venv_dir / 'bin/python')]
+    pip = python[str(venv_dir / 'bin/pip')]  # Note: setuptools sometimes creates shebangs that are longer than the max allowed, so we call pip with python directly, avoiding the shebang
     
     # Install install dependencies    
     base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
     logger.info('Installing install dependencies')
-    python('venv/bin/pip', 'install', '--upgrade', *base_dependencies) # Note: setuptools sometimes creates shebangs that are longer than the max allowed, so we call pip with python directly, avoiding the shebang
+    pip('install', '--upgrade', *base_dependencies)
     
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
     desired_dependencies = base_dependencies
@@ -74,7 +72,7 @@ def _main():
     
     # Get installed dependencies
     installed_dependencies = set()
-    for _, dependency, version_spec, _ in parse_requirements(python('venv/bin/pip', 'freeze').splitlines()):
+    for _, dependency, version_spec, _ in parse_requirements(pip('freeze').splitlines()):
         if dependency:
             installed_dependencies.add(get_dependency_name(dependency))
             
@@ -82,11 +80,11 @@ def _main():
     extra_dependencies = installed_dependencies - desired_dependencies
     if extra_dependencies:
         logger.info('Removing packages not listed as dependencies: ' + ' '.join(extra_dependencies))
-        python('venv/bin/pip', 'uninstall', '-y', *extra_dependencies)
+        pip('uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
     logger.info('Installing dependencies')
-    python('venv/bin/pip', 'install', '-r', 'requirements.txt')  # Note: first uninstalls pkg if different version is installed
+    pip('install', '-r', 'requirements.txt')  # Note: first uninstalls pkg if different version is installed
     
     # Get desired SIP dependencies
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}
@@ -132,7 +130,7 @@ def _main():
                 wget(url.format(version=version)) #XXX use CTU http.download_file instead
                 tar('zxvf', str(tar_path))
                 with pb.local.cwd(str(unpack_path)):
-                    cmd = sh['-c', '. ../venv/bin/activate && python configure.py && make && make install']
+                    cmd = sh['-c', '. {} && python configure.py && make && make install'.format(str(venv_dir / 'bin/activate'))]
                     if name == 'pyqt5':
                         # say yes to license and ignore exit code as this script always fails (but still install correctly)
                         (cmd << 'yes\n')(retcode=None)
@@ -146,5 +144,5 @@ def _main():
         
     # Install project package
     logger.info('Installing project package')
-    python('venv/bin/pip', 'install', '-e', '.')
+    pip('install', '-e', '.')
     
