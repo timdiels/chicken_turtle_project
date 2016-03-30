@@ -175,11 +175,14 @@ def get_dependency_name(url):
 def get_pkg_root(project_root, project_name):
     return project_root / project_name.replace('-', '_')
     
-#: lower-case names of known SIP packages
-sip_packages = ('sip', 'pyqt5')
+#: lower-case names of known SIP packages mapped to a sentinel package to detect whether they're installed
+sip_packages = {
+    'sip' : 'sip',
+    'pyqt5' : 'PyQt5'
+}
 
 def is_sip_dependency(name):
-    return name.lower() in sip_packages
+    return name.lower() in sip_packages.keys()
 
 def get_dependency_file_paths(project_root):
     paths = [Path(x) for x in glob(str(project_root / '*requirements.in'))]

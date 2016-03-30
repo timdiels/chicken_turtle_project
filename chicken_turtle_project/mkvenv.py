@@ -102,12 +102,8 @@ def _main():
                 
     # Get installed SIP dependencies
     installed_sip_dependencies = set()
-    for name in sip_packages:
-        if name == 'pyqt5':
-            sip_pkg_name = 'PyQt5'
-        else:
-            sip_pkg_name = name
-        if python['-c', 'import {}'.format(sip_pkg_name)] & pb.TF:
+    for name, package in sip_packages.items():
+        if python['-c', 'import {}'.format(package)] & pb.TF:
             installed_sip_dependencies.add(name)
     
     # Install SIP dependencies
