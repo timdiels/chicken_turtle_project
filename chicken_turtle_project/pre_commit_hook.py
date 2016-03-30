@@ -35,14 +35,10 @@ def main():
                 GIT_DIR=str(_get_abs_path_from_env('GIT_DIR')),
                 GIT_INDEX_FILE=str(_get_abs_path_from_env('GIT_INDEX_FILE')),
                 CT_VENV_DIR=str(venv_dir),
+                CT_PRE_COMMIT='true'
             ) 
             with env_context, pb.local.cwd(str(temp_dir)):
-                # Update project
-                pb.local['ct-mkproject']['--pre-commit'] & pb.FG
-                
-                pb.local['ct-mkvenv'] & pb.FG
-                
-                # Check documentation for errors
+                # Check documentation for errors (which also updates the venv, which we rely on)
                 pb.local['ct-mkdoc'] & pb.FG
                 
                 # Forget about Git and Chicken Turtle environment before running tests

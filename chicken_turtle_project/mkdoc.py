@@ -15,10 +15,12 @@ def main():
     '''
     Generate project documentation
     
-    See also: `ct-mkproject` for generating and updating files required by ct-mkdoc.
+    Note: calls `ct-mkvenv` to ensure the venv is up to date
     '''
     init_logging()
     with graceful_main(logger):
+        pb.local['ct-mkvenv'] & pb.FG  # ensure venv is up to date
+        
         venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
         project_root = Path.cwd()
         project = get_project(project_root)
@@ -33,4 +35,4 @@ def main():
             pkg_name=pkg_root.name,
             pkg_root=pkg_root
         )
-        pb.local['sh']('-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_root}/test && cd {doc_root} && make html'.format(**kwargs))
+        pb.local['sh']['-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_root}/test && cd {doc_root} && make html'.format(**kwargs)] & pb.FG

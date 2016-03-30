@@ -27,19 +27,15 @@ def main():
     '''
     Create Python virtual environment in `./venv` and install project in it.
     
-    The following input files are required:
-    
-    - `./*requirements.in`
-    - `./setup.py`
-    - `./requirements.txt`
-    
-    See also: `ct-mkproject` for generating/updating the above files.
+    Note: Calls `ct-mkproject` to ensure project files are up to date.
     '''
     init_logging()
     with graceful_main(logger):
         _main()
     
 def _main():
+    pb.local['ct-mkproject'] & pb.FG  # Ensure requirements.in files, ... are up to date
+    
     project_root = Path.cwd()
     venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
     print(venv_dir)
