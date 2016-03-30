@@ -35,10 +35,9 @@ Version = partial(versio.version.Version, scheme=versio.version_scheme.Pep440Ver
 Version.__name__ = 'Version'
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help'])) #TODO put in CT util cli
-@cli.option(
-    '--project-version',
-    type=Version,
-    help='Version of the project release, e.g. "1.0.0-dev2". Versions must adhere to PEP-0440 and preferably make use of semantic versioning.'
+@cli.argument(
+    'project-version',
+    type=Version
 )
 @click.version_option(version=__version__)
 def main(project_version):
@@ -49,6 +48,12 @@ def main(project_version):
     
     Any staged/unstaged changes and untracked files will be ignored. If you do 
     want these, commit them first.
+    
+    Note: Calls `ct-mkdoc` before uploading documentation.
+    
+    Arguments: project-version: Version of the project release, e.g.
+    "1.0.0-dev2". Versions must adhere to PEP-0440 and preferably make use of
+    semantic versioning.
     '''
     init_logging()
     with graceful_main(logger):       

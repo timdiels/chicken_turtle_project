@@ -38,7 +38,6 @@ def _main():
     
     project_root = Path.cwd()
     venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
-    print(venv_dir)
     
     # Create venv if missing
     if not venv_dir.exists():

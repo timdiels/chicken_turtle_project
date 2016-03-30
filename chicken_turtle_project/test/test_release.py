@@ -30,7 +30,8 @@ def mocked_release(mocker):
 
 
 ## util ##########################
- 
+
+@pytest.mark.current
 def create_release_project(project=project1, test_index=True):
     '''
     Create valid project for release
@@ -66,7 +67,7 @@ def test_ignore_staged(tmpcwd):
     create_release_project()
     write_file(Path('project.py'), '')  # Invalid project.py
     git_('add', 'project.py')
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0, result.output
     
 def test_ignore_untracked(tmpcwd):
@@ -76,7 +77,7 @@ def test_ignore_untracked(tmpcwd):
     create_release_project()
     test_fail_path = Path('operation_mittens/test/test_fail.py')
     write_file(test_fail_path, extra_files[test_fail_path])
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0, result.output
 
 def test_ignore_unstaged(tmpcwd):
@@ -85,7 +86,7 @@ def test_ignore_unstaged(tmpcwd):
     '''
     create_release_project()
     write_file(Path('project.py'), '')  # Invalid project.py
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0, result.output
 
 def test_happy_days(tmpcwd, mocked_release):
@@ -93,7 +94,7 @@ def test_happy_days(tmpcwd, mocked_release):
     When valid project with clean working dir and valid version, release
     '''
     create_release_project()
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     git_('reset', '--hard')
     assert result.exit_code == 0, result.output
     assert mocked_release.call_args_list == [(('pypitest',),), (('pypi',),)]
@@ -107,7 +108,7 @@ def test_no_test_index(tmpcwd, mocked_release):
     When no index_test is specified, succeed
     '''
     create_release_project(test_index=False)
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0
     assert mocked_release.call_args_list == [(('pypi',),)]
 
@@ -116,9 +117,9 @@ def test_no_reuse_versions(tmpcwd):
     When previously used version is specified, fail gracefully
     '''
     create_release_project()
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0, result.output
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code != 0, result.output
     assert 'version has been released before' in result.output
         
@@ -133,7 +134,7 @@ def test_older_than_ancestor(tmpcwd):
     git_('commit', '-m', 'message')
     git_('tag', 'v0.5.0')
     
-    result = release('--project-version', '1.0.0', input='y\n')
+    result = release('1.0.0', input='y\n')
     assert result.exit_code == 0, result.output
     assert '2.0.0' in result.output
     assert 'less than' in result.output
@@ -158,7 +159,7 @@ def test_older_than_other_branch(tmpcwd):
     git_('commit', '-m', 'message')
     git_('tag', 'v0.8.0')
     
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code == 0, result.output
     assert 'v2.0.0' not in result.output
     assert 'less than' not in result.output
@@ -173,7 +174,7 @@ def test_editable_requirements(tmpcwd):
     create_release_project(project)
     git_('add', '.')
     git_('commit', '-m', 'message')
-    result = release('--project-version', '1.0.0')
+    result = release('1.0.0')
     assert result.exit_code != 0
     assert 'No editable requirements (-e) allowed for release' in result.output
             
