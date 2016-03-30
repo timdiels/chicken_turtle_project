@@ -6,6 +6,7 @@ from chicken_turtle_project.common import eval_string
 from contextlib import contextmanager
 from checksumdir import dirhash
 from textwrap import dedent
+from datetime import date
 from pathlib import Path
 import plumbum as pb
 import logging
@@ -20,7 +21,7 @@ git_ = pb.local['git']
 # When a project is created from scratch, these should be the project.py defaults
 project_defaults = dict(
     name='operation-mittens',
-#     human_friendly_name='Operation Mittens',
+    human_friendly_name='Operation Mittens',
     description='Short description',
     author='your name',
     author_email='your_email@example.com',
@@ -86,7 +87,7 @@ _project_py = project_defaults.copy()
 del _project_py['entry_points']
 del _project_py['index_test']
 _project_py.update(
-    author='mittens',
+    author='Mittens Glorious',
     author_email='mittens@test.com',
     url='https://test.com/project/home',
     download_url='https://test.com/repo/{version}',
@@ -95,9 +96,12 @@ _project_py.update(
 
 _format_kwargs = {
     'name': 'operation-mittens',
+    'human_friendly_name': 'Operation Mittens',
+    'author' : 'Mittens Glorious',
     'pkg_name': 'operation_mittens',
     'version': '0.0.0',
     'readme_file': 'README.md',
+    'year': date.today().year,
 }
 
 _project_files = {
@@ -125,10 +129,14 @@ _project_files = {
         mittens_says = meow
         '''),
     Path('setup.py'): '# mittens setup.py',
-    Path('doc_src/conf.py'): '# mittens conf.py',
-    Path('doc_src/Makefile'): dedent('''\
+    Path('docs/index.rst'): '.. mittens index.rst',
+    Path('docs/conf.py'): '# mittens conf.py',
+    Path('docs/Makefile'): dedent('''\
         all:
-            true
+        \ttrue
+        
+        html:
+        \ttrue
         '''),
 } 
 
@@ -207,7 +215,7 @@ def add_complex_requirements_in(project):
         
         # line-comment
         pytest  # in-line comment
-        pytest-xdist<5.0.0 # version
+        pytest-testmon<5.0.0 # version
         # more comment
         pytest-env==0.6
         -e ./pkg_magic
@@ -329,7 +337,7 @@ def assert_process_fails(stderr_matches):
     '''
     with pytest.raises(pb.ProcessExecutionError) as ex:
         yield
-    assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}'.format(stderr_matches, ex.value.stderr)
+    assert re.search(stderr_matches, ex.value.stderr), 'Expected regex: {}\nto match: {}\nstdout is: {}'.format(stderr_matches, ex.value.stderr, ex.value.stdout)
     
 def assert_re_search(pattern, string):
     assert re.search(pattern, string), 'Expected regex: {}\nto match: {}'.format(pattern, string)

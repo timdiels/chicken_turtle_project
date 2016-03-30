@@ -59,14 +59,12 @@ def _main():
         logger.info('Creating venv')
         python('-m', 'venv', 'venv')
         
-    python = pb.local['venv/bin/python'] 
-    pip = pb.local['venv/bin/pip']
-    pip_install = pip['install']
+    python = pb.local['venv/bin/python']
     
     # Install install dependencies    
     base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
     logger.info('Installing install dependencies')
-    pip_install('--upgrade', *base_dependencies)
+    python('venv/bin/pip', 'install', '--upgrade', *base_dependencies) # Note: setuptools sometimes creates shebangs that are longer than the max allowed, so we call pip with python directly, avoiding the shebang
     
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
     desired_dependencies = base_dependencies
@@ -76,19 +74,19 @@ def _main():
     
     # Get installed dependencies
     installed_dependencies = set()
-    for _, dependency, version_spec, _ in parse_requirements(pip('freeze').splitlines()):
+    for _, dependency, version_spec, _ in parse_requirements(python('venv/bin/pip', 'freeze').splitlines()):
         if dependency:
             installed_dependencies.add(get_dependency_name(dependency))
             
     # Remove installed packages not listed in requirements.txt
     extra_dependencies = installed_dependencies - desired_dependencies
     if extra_dependencies:
-        logger.info('Removing packages not listed as dependencies')
-        pip('uninstall', '-y', *extra_dependencies)
+        logger.info('Removing packages not listed as dependencies: ' + ' '.join(extra_dependencies))
+        python('venv/bin/pip', 'uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
     logger.info('Installing dependencies')
-    pip_install('-r', 'requirements.txt')  # Note: first uninstalls pkg if different version is installed
+    python('venv/bin/pip', 'install', '-r', 'requirements.txt')  # Note: first uninstalls pkg if different version is installed
     
     # Get desired SIP dependencies
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}
@@ -105,7 +103,11 @@ def _main():
     # Get installed SIP dependencies
     installed_sip_dependencies = set()
     for name in sip_packages:
-        if python['-c', 'import sip'] & pb.TF:
+        if name == 'pyqt5':
+            sip_pkg_name = 'PyQt5'
+        else:
+            sip_pkg_name = name
+        if python['-c', 'import {}'.format(sip_pkg_name)] & pb.TF:
             installed_sip_dependencies.add(name)
     
     # Install SIP dependencies
@@ -148,5 +150,5 @@ def _main():
         
     # Install project package
     logger.info('Installing project package')
-    pip_install('-e', '.')
+    python('venv/bin/pip', 'install', '-e', '.')
     

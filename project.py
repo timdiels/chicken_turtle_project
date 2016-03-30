@@ -39,6 +39,7 @@ project = dict(
     
     # standard
     name='chicken_turtle_project',
+    human_friendly_name='Chicken Turtle Project',
     description="Python 3 project development tools",
     author='Tim Diels',
     author_email='timdiels.m@gmail.com',
@@ -57,7 +58,7 @@ project = dict(
             'ct-mkproject = chicken_turtle_project.mkproject:main',
             'ct-mkvenv = chicken_turtle_project.mkvenv:main',
             'ct-release = chicken_turtle_project.release:main',
-            'ct-interpreter = chicken_turtle_project.interpreter:main',
+            'ct-mkdoc = chicken_turtle_project.mkdoc:main',
             'ct-pre-commit-hook = chicken_turtle_project.pre_commit_hook:main',
         ],
     },

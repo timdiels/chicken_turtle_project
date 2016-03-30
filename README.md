@@ -30,13 +30,13 @@ includes documentation of the options.
 
 Having run `ct-project` once, you should never have to call it again. It will
 have installed a git pre-commit hook (unless you already had one) that ensures
-the project state is updated and valid.
+the project state is up to date and valid at each commit.
 
-This ensures that all your (future) commits have a requirements.txt with pinned
-versions, that are guaranteed to pass your tests when installed in a fresh
-virtual env. It also guarantees a number of other things such as the presence
-of a LICENSE.txt and a readme file, or an up-to-date __version__ field in your
-root package.
+This ensures that for all of your (future) commits:
+- there is a requirements.txt with pinned versions for which all tests succeed in a virtual env
+- there are no errors in the documentation (i.e. sphinx-build encounters no errors or warnings)
+- there is a LICENSE.txt, a readme file, ...
+- the version is up to date across the project
 
 ### Managing dependencies
 
@@ -54,6 +54,16 @@ install scikit-learn` fails when scipy is not installed, you can add its
 dependencies to `requirements.in` before the misbehaving dependency. When `X`
 appears before `Y` in `requirements.in` it will be installed before `Y` (unless
 `Y` is a dependency of `X`).
+
+### Package data
+
+Package data can be provided by placing a directory named `data` in the package
+you want to add data to. The `data` directory should not have a `__init__.py`
+(as direct descendant) as that would make it a package instead of a data
+directory.
+
+You can then access this data (regardless of whether and how the project is
+installed) using `pkg_resources <https://pythonhosted.org/setuptools/pkg_resources.html#basic-resource-access>`_.
 
 ### Testing
 
@@ -85,16 +95,6 @@ and use [semantic versioning](https://python-packaging-user-guide.readthedocs.or
 Versions are only set on release commits made by `ct-release`. At any other
 time, setup.py's version is 0.0.0. If you need to refer to a specific
 unreleased commit, use the commit's id.
-
-### Package data
-
-Package data can be provided by placing a directory named `data` in the package
-you want to add data to. The `data` directory should not have a `__init__.py`
-(as direct descendant) as that would make it a package instead of a data
-directory.
-
-You can then access this data (regardless of whether and how the project is
-installed) using the `pkg_resources` module.
 
 ### Deployment
 
@@ -136,6 +136,13 @@ these wheels probably can't be shared across machines. In order to support SIP
 based packages, we install them without pip and reuse the dev venv in
 pre-commits as to not incur the performance hit of waiting for a SIP package to
 compile.
+
+pytest-testmon is not compatible with pytest-xdist, --maxfail, --ff, --lf and
+--cov to name a few. It sometimes misses changes that do cause test failures.
+For these reasons, we default to using xdist instead of testmon. We may revisit
+testmon once it supports xdist. You can still install and use --testmon
+yourself, you probably shouldn't add --testmon to setup.cfg though as that would
+allow for commits with failing tests.
 
 ## See also
 

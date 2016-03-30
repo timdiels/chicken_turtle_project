@@ -11,6 +11,7 @@ from pathlib import Path
 from configparser import ConfigParser
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
+from datetime import date
 import plumbum as pb
 import pypandoc
 import click
@@ -88,7 +89,7 @@ def toset_from_tosets(*tosets):
     help='Internal option, do not use.'
 )
 @click.version_option(version=__version__)
-def _main(pre_commit, project_version): #TODO docstring out of sync?
+def _main(pre_commit, project_version):
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
@@ -98,32 +99,35 @@ def _main(pre_commit, project_version): #TODO docstring out of sync?
     The project must be in a git repository. 
     
     The following files are created if missing:
+    
     - project.py
-    - $project_name package
-    - $project_name/test package
-    - $project_name/test/conftest.py
-    - requirements.in
-    - doc_src
+    - docs/conf.py
+    - docs/index.rst
+    - docs/Makefile
     
     The following files may be created or updated by merging in changes:
+    
     - $project_name/__init__.py
+    - $project_name/test/conftest.py
     - .gitignore
+    - .coveragerc
     - setup.cfg
+    - requirements.in
     - dev_requirements.in
     - test_requirements.in
     - MANIFEST.in
     
     The following files will be created or overwritten if they exist:
+    
     - requirements.txt
     - setup.py
     
     Warnings are emitted if these files are missing:
+    
     - LICENSE.txt
     - readme file pointed to by readme_file
     
-    ct-mkproject ensures certain patterns are part of .gitignore, but does not erase any patterns you added.
-    
-    py.test will be configured to run test in $project_name.test and subpackages.
+    py.test will be configured to run tests in $project_name.test and subpackages.
     
     All dependencies should be listed in a requirements.in. If you want to
     install dependencies as editable, prefix them with -e and provide a path to
@@ -150,16 +154,19 @@ def _main(pre_commit, project_version): #TODO docstring out of sync?
         
         format_kwargs = {
             'name': project['name'],
+            'human_friendly_name': project['human_friendly_name'],
+            'author': project['author'],
             'readme_file': project['readme_file'],
             'pkg_name': pkg_root.name,
             'version': project_version,
+            'year': date.today().year,
         }
         
-        _ensure_root_package_exists(pkg_root)
+        _ensure_exists(pkg_root / '__init__.py')
         _update_root_package(pkg_root, format_kwargs)
         
         test_root = pkg_root / 'test'
-        _ensure_test_package_exists(test_root)
+        _ensure_exists(test_root / '__init__.py')
         
         conftest_py_path = test_root / 'conftest.py'
         _ensure_exists(conftest_py_path)
@@ -173,6 +180,10 @@ def _main(pre_commit, project_version): #TODO docstring out of sync?
         _ensure_exists(requirements_in_path)
         _ensure_contains_snippets(requirements_in_path, {spec.requirements_in_header}, format_kwargs)
 
+        dev_requirements_in_path = project_root / 'dev_requirements.in'
+        _ensure_exists(dev_requirements_in_path)
+        _ensure_contains_snippets(dev_requirements_in_path, spec.dev_requirements_in, format_kwargs)
+        
         test_requirements_in_path = project_root / 'test_requirements.in'
         _ensure_exists(test_requirements_in_path)
         _ensure_contains_snippets(test_requirements_in_path, spec.test_requirements_in, format_kwargs)
@@ -202,29 +213,24 @@ def _main(pre_commit, project_version): #TODO docstring out of sync?
         _update_requirements_txt(project_root)
         
         _update_setup_py(project, project_root, pkg_root, format_kwargs)
+        
+        doc_root = project_root / 'docs' 
+        _ensure_exists(doc_root / 'conf.py', spec.docs_conf_py, format_kwargs)
+        _ensure_exists(doc_root / 'Makefile', spec.docs_makefile, raw=True)
+        _ensure_exists(doc_root / 'index.rst', spec.docs_index_rst, format_kwargs)
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
     if not project_path.exists():
         logger.info('project.py not found, will create from template')
-        project_name = click.prompt('Please pick a name for your project')
-        assert project_name and project_name.strip()
+        name = click.prompt('Please pick a name for your project')
+        human_friendly_name = click.prompt('Please pick a human friendly name for your project')
+        assert name and name.strip()
+        assert human_friendly_name and human_friendly_name.strip()
         with project_path.open('w') as f:
             logger.info('Creating project.py')
-            f.write(spec.project_py.format(name=project_name, pkg_name=get_pkg_root(project_root, project_name).name))
+            f.write(spec.project_py.format(name=name, human_friendly_name=human_friendly_name, pkg_name=get_pkg_root(project_root, name).name))
             git_('add', str(project_path))
-
-def _ensure_root_package_exists(pkg_root):
-    # Create package dir if missing
-    if not pkg_root.exists():
-        logger.info('Creating {}'.format(pkg_root))
-        pkg_root.mkdir()
-    
-    # Ensure package root __init__.py exists
-    pkg_root_init = pkg_root / '__init__.py'
-    if not pkg_root_init.exists():
-        logger.info('Creating {}'.format(pkg_root_init))
-        pkg_root_init.touch()
         
 def _update_root_package(pkg_root, format_kwargs):
     '''
@@ -245,24 +251,21 @@ def _update_root_package(pkg_root, format_kwargs):
         f.write('\n'.join(lines))
     git_('add', pkg_root_init)
     
-def _ensure_test_package_exists(test_root):
-    if not test_root.exists():
-        logger.info('Creating {}'.format(test_root))
-        test_root.mkdir()
-    
-    test_root_init = test_root / '__init__.py'
-    if not test_root_init.exists():
-        logger.info('Creating {}'.format(test_root_init))
-        test_root_init.touch()
-        git_('add', test_root_init)
+def _ensure_dir_exists(path):
+    if not path.exists():
+        path.mkdir()
         
-def _ensure_exists(path, git_add=True):
+def _ensure_exists(path, content='', format_kwargs={}, raw=False, git_add=True):
     '''
     Ensure file exists
     '''
+    os.makedirs(str(path.parent), exist_ok=True)
     if not path.exists():
         logger.info('Creating {}'.format(path))
-        path.touch()
+        with path.open('w') as f:
+            if not raw:
+                content = content.format(**format_kwargs)
+            f.write(content)
         if git_add:
             git_('add', str(path))
         
@@ -374,7 +377,7 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
     project['packages'] = find_packages()
-    project['package_data'] = _get_package_data(project_root, pkg_root)
+    project['package_data'] = _get_package_data(pkg_root, project['packages'])
     
     # Add download_url if current commit is version tagged
     if project['version'] != _dummy_version:
@@ -417,22 +420,15 @@ def _get_dependencies(project_root):
             extra_requires[name] = dependencies
     return dict(install_requires=install_requires, extras_require=extra_requires)
     
-def _get_package_data(project_root, pkg_root):
-    pkg_root = pkg_root.relative_to(project_root)
+def _get_package_data(pkg_root, packages):
     package_data = defaultdict(list) 
-    for parent, dirs, files in os.walk(str(pkg_root), topdown=True): #XXX find_packages already found all packages so you could simply use that and check for children named 'data' that aren't in `packages` themselves
-        # Note: `parent` is path str relative to what we're walking
-        if '__init__.py' not in files:
-            # Don't search in non-package directories
-            dirs[:] = []
-        elif 'data' in dirs:
-            # Is part of a package, is named 'data', could be a data dir or a package
-            dir_ = Path(parent) / 'data'
-            if not (dir_ / '__init__.py').exists():
-                # It's a data dir
-                dirs.remove('data') 
-                for parent2, _, files2 in os.walk(str(dir_)):
-                    package_data[parent.replace('/', '.')].extend(str(Path(parent2) / file) for file in files2)
+    for package in packages:
+        package_dir = pkg_root.parent / package.replace('.', '/')
+        data_dir = package_dir / 'data'
+        if data_dir.exists() and not (data_dir / '__init__.py').exists():
+            # Found a data dir
+            for parent, _, files in os.walk(str(data_dir)):
+                package_data[package].extend(str((data_dir / parent / file).relative_to(package_dir)) for file in files)
     return dict(package_data)
         
 setup_py_template = spec.setup_py_header + '''\
@@ -441,4 +437,4 @@ from setuptools import setup
 setup(
     **{}
 )
-'''.lstrip()
+'''

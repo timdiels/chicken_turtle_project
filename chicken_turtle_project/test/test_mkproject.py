@@ -13,6 +13,7 @@ from chicken_turtle_project import specification as spec
 from pathlib import Path
 from configparser import ConfigParser
 from enum import IntEnum
+from textwrap import dedent
 import plumbum as pb
 import itertools
 import pytest
@@ -111,9 +112,10 @@ class _SnippetsRequirement(object):
     Require file to contain given snippets, in any order, allowing overlap
     '''
     
-    def __init__(self, permission, snippets):
+    def __init__(self, permission, snippets, format_snippets=True):
         self.permission = permission
         self._snippets = snippets
+        self._format = format_snippets
     
     def verify_default_content(self, content, format_kwargs):
         self._verify(content, format_kwargs)
@@ -124,8 +126,12 @@ class _SnippetsRequirement(object):
         self._verify(updated_content, format_kwargs)
     
     def _verify(self, content, format_kwargs):
-        for snippet in self._snippets:
-            assert snippet.format(**format_kwargs) in content
+        if self._format:
+            snippets = (snippet.format(**format_kwargs) for snippet in self._snippets)
+        else:
+            snippets = self._snippets
+        for snippet in snippets:
+            assert snippet in content
             
 class _NoRequirement(object):
     
@@ -150,10 +156,11 @@ project_file_requirements = {
     Path('operation_mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
     Path('operation_mittens/test/__init__.py') : _NoRequirement(Permission.create),
     Path('operation_mittens/test/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
-#     Path('doc_src/conf.py') : 'create',
-#     Path('doc_src/Makefile') : 'create',
+    Path('docs/conf.py') : _SnippetsRequirement(Permission.create, {spec.docs_conf_py}),
+    Path('docs/Makefile') : _SnippetsRequirement(Permission.create, {spec.docs_makefile}, format_snippets=False),
+    Path('docs/index.rst') : _SnippetsRequirement(Permission.create, {spec.docs_index_rst}),
     Path('requirements.in') : _SnippetsRequirement(Permission.update, {spec.requirements_in_header}),
-#     Path('dev_requirements.in') : _SnippetsRequirement(Permission.update, spec.dev_requirements_in),
+    Path('dev_requirements.in') : _SnippetsRequirement(Permission.update, spec.dev_requirements_in),
     Path('test_requirements.in') : _SnippetsRequirement(Permission.update, spec.test_requirements_in),
     Path('requirements.txt') : _NoRequirement(Permission.overwrite), # tested elsewhere
     Path('.gitignore') : _SnippetsRequirement(Permission.update, spec.gitignore_patterns),
@@ -167,6 +174,15 @@ project_file_requirements = {
 }
 
 ## setup, asserts, util #######################################
+
+def add_docstring(project, docstring):
+    for path in (Path('docs/index.rst'), Path('docs/conf.py'), Path('docs/Makefile')):
+        del project.files[path]
+    project.files[Path('operation_mittens/meow.py')] = dedent('''\
+        def meow_meow():
+            '{}'
+        '''.format(docstring)
+    )
 
 def is_subsequence(left, right): #TODO to CTU
     '''
@@ -260,7 +276,7 @@ class TestProjectPy(object):
         # When project.py is missing and git repo exists but has no commits
         create_project()
         remove_file(Path('project.py'))
-        (mkproject << project_defaults['name'] + '\n')() #TODO + project_defaults['human_friendly_name'] + '\n'
+        (mkproject << project_defaults['name'] + '\n' + project_defaults['human_friendly_name'] + '\n')()
         
         # Then project.py is created and contains the defaults we want
         project_py_path = Path('project.py')
@@ -317,7 +333,6 @@ class TestProjectPy(object):
 
 class TestSetupPyAndRequirementsTxt(object):
 
-    @pytest.mark.current
     def test_setup_py(self, tmpcwd):
         '''
         Test generated setup.py and requirements.txt
@@ -360,10 +375,10 @@ class TestSetupPyAndRequirementsTxt(object):
         assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
         assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.test', 'operation_mittens.test.pkg']
         assert {k:set(v) for k,v in setup_args['package_data'].items()} == {
-            'operation_mittens.test' : {'operation_mittens/test/data/subdir/file1', 'operation_mittens/test/data/subdir/file2'},
-            'operation_mittens.test.pkg' : {'operation_mittens/test/pkg/data/file'},
+            'operation_mittens.test' : {'data/subdir/file1', 'data/subdir/file2'},
+            'operation_mittens.test.pkg' : {'data/file'},
         }
-        assert set(setup_args['install_requires']) == {'pytest', 'pytest-xdist<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
+        assert set(setup_args['install_requires']) == {'pytest', 'pytest-testmon<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
         assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test', 'dev'}
         assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
         assert set(setup_args['extras_require']['test']) == set(spec.test_requirements_in)
@@ -372,7 +387,7 @@ class TestSetupPyAndRequirementsTxt(object):
         
         # requirements.txt must contain relevant packages, including optional dependencies
         requirements_txt_content = read_file('requirements.txt')
-        for name in {'pytest', 'pytest-xdist', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'} | set(spec.test_requirements_in): #TODO | set(spec.dev_requirements_in:)
+        for name in {'pytest', 'pytest-testmon', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'} | set(spec.test_requirements_in) | set(spec.dev_requirements_in):
             assert name in requirements_txt_content
              
         # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
@@ -409,7 +424,7 @@ class TestSetupPyAndRequirementsTxt(object):
         with assert_process_fails(stderr_matches=r"(?i)'PyQt5' .* pin"):
             mkproject()
     
-class TestPrecommit(object):
+class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit hook -> test_pre_commit_hook
     
     def create_project(self):
         project = project1.copy()
@@ -432,7 +447,7 @@ class TestPrecommit(object):
         git_('add', '.')
         with assert_process_fails(stderr_matches='(?i)error'):
             git_('commit', '-m', 'message')  # runs the hook
-            
+        
     def test_ignore_unstaged(self, tmpcwd):
         '''
         Pre-commit must ignore unstaged changes
@@ -467,33 +482,17 @@ class TestPrecommit(object):
         # Expected change happened and is part of the commit
         git_('reset', '--hard')
         assert get_setup_args()['install_requires'] == ['pytest']
-    
-# class TestDocumentation(object):
-#     
-#     def test_documentation(self, tmpcwd):
-#         '''When happy days and a file with proper docstring, generate ./doc'''
-#         assert False
-#         # TODO: index.html contains:
-#         # correct version
-#         # human friendly project name
-#         # the docstring of the project
-#         
-#         # impl TODO
-#         # build doc on each commit
-#         # Code conf.py such that it fetches project.__version__ as the version
-#         # doc_src/conf.py <-- human friendly project name, e.g. 'Chicken Turtle Util'. refer to api in toc
-#         # doc_src/... (create along with conf.py) (you'll have to copy paste the rest of the tree, perhaps dotfiles too)
-#         '''
-#         project_root$ rm doc_src/api
-#         project_root$ sphinx-apidoc -o doc_src/api chicken_turtle_util chicken_turtle_util/test
-#         $ cd doc_src
-#         $ make html
-#         $ mv _build/html ../doc
-#         '''
-#             
-#     def test_documentation_error(self, tmpcwd):
-#         '''When a docstring contains an error, exit non-zero'''
-#         assert False
+            
+    def test_invalid_documentation(self, tmpcwd):
+        '''When a docstring contains an error, mkdoc exits non-zero and pre-commit aborts'''
+        project = project1.copy()
+        add_docstring(project, '.. derpistan:: nope')
+        create_project(project)
+        mkproject()
+        git_('add', '.')
+        
+        with assert_process_fails(stderr_matches='derpistan'):
+            git_('commit', '-m', 'message')  # runs the hook
         
 def test_idempotent(tmpcwd):
     '''
@@ -513,12 +512,43 @@ def test_wrong_readme_file_name(tmpcwd, name):
     
     with assert_process_fails(stderr_matches='readme_file'):
         mkproject()
+        
+def test_mkdoc(tmpcwd):
+    '''When happy days and a file with proper docstring, generate ./doc'''
+    # Setup
+    project = project1.copy()
+    description = 'Meow meow n meow meow meow'
+    add_docstring(project, description)
+    create_project(project)
+    
+    # Run
+    mkproject()
+    pb.local['ct-mkvenv']()
+    pb.local['ct-mkdoc']()
+    
+    # Assert
+    content = read_file('docs/build/html/index.html')
+    assert '0.0.0' in content  # correct version
+    assert project.project_py['human_friendly_name'] in content  # human friendly project name
+    assert 'operation_mittens.meow' in content
+    
+    content = read_file('docs/build/html/api/operation_mittens.html')
+    assert description in content  # the docstring of the project
 
 # TODO use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
 '''
 TODO
 
-testmon seems to fail to detect changes correctly, should probably do an --testmon-off -n auto in pre-commit to make sure it's really fine. 
+- Add ct-mkdoc
+- Generate sphinx documentation in ./docs on pre-commit
+- Fix: package data: use paths relative to package in package_data
+- Remove ct-interpreter
+- Fix: work around setuptools' shebangs exceeding the max length sometimes
+- Ignore case and '-' vs '_' in dependency names
+
+# ct-release calls ct-mkdoc so it can upload generated docs as the built docs
+# ct-release uploads docs
+Perhaps allow dependencies between the tools as they sort of already do, allowing us to run ct-mkvenv from ct-mkdoc when ct-mkvenv still needs to be run, etc. This would require a bit of a Make system to only run when things have changed. In fact, ct-mkvenv should become better at not redoing old work, etc. But tools should call their dependencies. call order: ct-mkproject <- ct-mkvenv <- ct-mkdoc <- ct-release
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 

@@ -57,7 +57,7 @@ def get_project(project_root):
     except KeyError:
         raise UserException('project.py must export a `project` variable (with a dict)')
     
-    required_attributes = {'name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
+    required_attributes = {'name', 'human_friendly_name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
     optional_attributes = {'entry_points', 'index_test'}
     
     # Attributes that must be present    
@@ -170,13 +170,13 @@ def get_url_name(url):
     return path_stem_deep(Path(result.netloc + '/' + result.path))
 
 def get_dependency_name(url):
-    return get_url_name(url).replace('_', '-')
+    return get_url_name(url).lower().replace('_', '-')
 
 def get_pkg_root(project_root, project_name):
     return project_root / project_name.replace('-', '_')
     
+#: lower-case names of known SIP packages
 sip_packages = ('sip', 'pyqt5')
-'lower-case names of known SIP packages'
 
 def is_sip_dependency(name):
     return name.lower() in sip_packages
@@ -194,7 +194,9 @@ def remove_file(path): #TODO move to CTU: path.remove()
     ----------
     path : Path
     '''
-    if path.is_dir():
+    if not path.exists():
+        return
+    elif path.is_dir():
         shutil.rmtree(str(path))
     else:
         path.unlink()

@@ -39,12 +39,9 @@ def main():
                 # Reuse dev venv, if any
                 venv_dir = project_root / 'venv'
                 if venv_dir.exists():
+                    # TODO symlinking isn't sufficient as the venv uses abs paths, e.g. it would install scripts with an abs path referring to the symlink path which will disappear
+                    # We need a CT_VENV_DIR, defaulting to ./venv
                     Path(venv_dir.name).symlink_to(venv_dir, target_is_directory=True)
-                    
-                # Reuse pytest-testmon data
-                testmondata_path = project_root / '.testmondata'
-                if testmondata_path.exists():
-                    Path(testmondata_path.name).symlink_to(testmondata_path)
                     
                 # Update project
                 pb.local['ct-mkproject']['--pre-commit'] & pb.FG
@@ -54,8 +51,12 @@ def main():
                 for name in bad_env_vars:
                     del pb.local.env[name]
                 
-                # Run tests
                 pb.local['ct-mkvenv'] & pb.FG
+                
+                # Check documentation for errors
+                pb.local['ct-mkdoc'] & pb.FG
+                
+                # Run tests
                 pb.local['venv/bin/py.test'] & pb.FG(retcode=(0,5))
             
         finally:
