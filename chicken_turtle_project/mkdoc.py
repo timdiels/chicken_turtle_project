@@ -35,4 +35,4 @@ def main():
             pkg_name=pkg_root.name,
             pkg_root=pkg_root
         )
-        pb.local['sh']['-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_root}/test && cd {doc_root} && make html'.format(**kwargs)] & pb.FG
+        pb.local['sh']['-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_name} {pkg_name}/test && cd {doc_root} && make html'.format(**kwargs)] & pb.FG

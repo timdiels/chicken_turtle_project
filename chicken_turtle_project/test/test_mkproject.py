@@ -391,9 +391,9 @@ class TestSetupPyAndRequirementsTxt(object):
             assert name in requirements_txt_content
              
         # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
-        deps_txt = [get_dependency_name(line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
+        deps_txt = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
         for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
-            deps_in = [get_dependency_name(line[1]) for line in parse_requirements_file(path) if line[1]]
+            deps_in = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(path) if line[1]]
             assert is_subsequence(deps_in, deps_txt)
             
     def test_sip_dependency(self, tmpcwd):
@@ -538,8 +538,9 @@ def test_mkdoc(tmpcwd):
 '''
 TODO
 
-# ct-release calls ct-mkdoc so it can upload generated docs as the built docs
-# ct-release uploads docs
+. ct-release uploads docs.
+
+fix: after each commit, package is left uninstalled in the venv. Perhaps only when it has had test failures
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 

@@ -29,7 +29,7 @@ def main():
     
     Note: Calls `ct-mkproject` to ensure project files are up to date.
     '''
-    init_logging()
+    init_logging(debug=False)
     with graceful_main(logger):
         _main()
     
@@ -57,25 +57,29 @@ def _main():
     # Install install dependencies    
     base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
     logger.info('Installing install dependencies')
-    pip('install', '--upgrade', *base_dependencies)
+    pip.bgrun(['install', '--upgrade'] + list(base_dependencies))
     
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
     desired_dependencies = base_dependencies
-    for _, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
+    for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
         if dependency:
-            desired_dependencies.add(get_dependency_name(dependency))
+            desired_dependencies.add(get_dependency_name(editable, dependency))
     
     # Get installed dependencies
     installed_dependencies = set()
-    for _, dependency, version_spec, _ in parse_requirements(pip('freeze').splitlines()):
+    for editable, dependency, version_spec, _ in parse_requirements(pip('freeze').splitlines()):
         if dependency:
-            installed_dependencies.add(get_dependency_name(dependency))
+            installed_dependencies.add(get_dependency_name(editable, dependency))
             
     # Remove installed packages not listed in requirements.txt
     extra_dependencies = installed_dependencies - desired_dependencies
+    extra_dependencies.discard('chicken-turtle-project')  # never uninstall chicken-turtle-project
+    logger.debug('Installed packages: ' + ' '.join(installed_dependencies))
+    logger.debug('Desired packages: ' + ' '.join(desired_dependencies))
+    logger.debug('Packages too many: ' + ' '.join(extra_dependencies))
     if extra_dependencies:
-        logger.info('Removing packages not listed as dependencies: ' + ' '.join(extra_dependencies))
-        pip('uninstall', '-y', *extra_dependencies)
+        logger.info('Removing packages not listed as dependencies')
+        pip.bgrun(['uninstall', '-y'] + list(extra_dependencies))
     
     # Install desired dependencies
     logger.info('Installing dependencies')
@@ -85,10 +89,10 @@ def _main():
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}
     input_file_paths = get_dependency_file_paths(project_root)
     for input_path in input_file_paths:
-        for _, dependency, version_spec, _ in parse_requirements_file(input_path):
+        for editable, dependency, version_spec, _ in parse_requirements_file(input_path):
             if not dependency:
                 continue
-            name = get_dependency_name(dependency)
+            name = get_dependency_name(editable, dependency)
             if is_sip_dependency(name):
                 assert version_spec.startswith('==')
                 desired_sip_dependencies[name.lower()] = version_spec[2:]
@@ -130,7 +134,7 @@ def _main():
                         # say yes to license and ignore exit code as this script always fails (but still install correctly)
                         (cmd << 'yes\n')(retcode=None)
                     else:
-                        cmd()
+                        cmd & pb.FG
             finally:
                 if unpack_path.exists():
                     remove_file(unpack_path)

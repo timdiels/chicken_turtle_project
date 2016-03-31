@@ -348,10 +348,10 @@ def _update_requirements_txt(project_root):
     
     # Reorder to match ordering in requirements.in
     requirements_txt_path = project_root / 'requirements.txt'
-    requirements_txt_lines = {get_dependency_name(line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
+    requirements_txt_lines = {get_dependency_name(line[0], line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
     all_dependencies = []
     for input_path in input_file_paths:
-        dependency_names = [get_dependency_name(line[1]) for line in parse_requirements_file(input_path) if line[1]]
+        dependency_names = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(input_path) if line[1]]
         dependency_names = [name for name in dependency_names if not is_sip_dependency(name)]
         all_dependencies.append(setlist(dependency_names))
 
@@ -401,13 +401,13 @@ def _get_dependencies(project_root):
     extra_requires = {}
     for path in paths: 
         dependencies = []
-        for editable, dependency, version_spec, _ in parse_requirements_file(path):
-            if not dependency or is_sip_dependency(dependency):
+        for editable, dependency_url, version_spec, _ in parse_requirements_file(path):
+            if not dependency_url:
                 continue
-            if editable:
-                # transform editable dependency into its package name
-                dependency = pb.local['python'](Path(dependency) / 'setup.py', '--name').strip()
-            dependencies.append(dependency + (version_spec or ''))
+            name = get_dependency_name(editable, dependency_url)
+            if is_sip_dependency(name):
+                continue
+            dependencies.append(name + (version_spec or ''))
         if path.name == 'requirements.in':
             install_requires = dependencies
         else:
