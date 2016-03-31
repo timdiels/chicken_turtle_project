@@ -83,7 +83,17 @@ def _main():
     
     # Install desired dependencies
     logger.info('Installing dependencies')
-    pip('install', '-r', 'requirements.txt')  # Note: first uninstalls pkg if different version is installed
+    for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):  # Note: we can't use pip install -r as we promise to install in order
+        if not dependency:
+            continue
+        if editable:
+            args = ['-e']
+        else:
+            args = []
+        if version_spec:
+            dependency += version_spec
+        args.append(dependency)
+        pip('install', *args)
     
     # Get desired SIP dependencies
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}
