@@ -538,8 +538,6 @@ def test_mkdoc(tmpcwd):
 '''
 TODO
 
-. ct-release uploads docs.
-
 fix: after each commit, package is left uninstalled in the venv. Perhaps only when it has had test failures
 
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)

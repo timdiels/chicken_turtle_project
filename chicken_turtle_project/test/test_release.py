@@ -31,7 +31,6 @@ def mocked_release(mocker):
 
 ## util ##########################
 
-@pytest.mark.current
 def create_release_project(project=project1, test_index=True):
     '''
     Create valid project for release
@@ -45,7 +44,7 @@ def create_release_project(project=project1, test_index=True):
     
     git_('add', '.')
     mkproject()
-    git_('commit', '-m', 'Initial commit')
+    git_['commit', '-m', 'Initial commit'] & pb.FG
     
     # Create repo and use as remote
     path = Path.cwd() / '.cache'  # some location ignored by .gitignore

@@ -121,7 +121,7 @@ def _release_all(project_root, project_version):
         try:
             # Prepare release
             logger.info('Preparing to commit versioned project')
-            pb.local['ct-mkproject'] & pb.FG  # While pre-commit hook will also call ct-mkproject, we need to call it here first to dirty the repo as git commit would throw otherwise
+            pb.local['ct-mkdoc'] & pb.FG  # Create project files (mkproject), and build documentation
             
             logger.info('Committing')
             git_['commit', '-m', 'Release {}'.format(version_tag)] & pb.FG
@@ -203,6 +203,11 @@ def _release(index_name):
     
     try:
         setup('sdist', 'upload', '-r', index_name)
+    except ProcessExecutionError as ex:
+        raise ReleaseError(partial=True, index_name=index_name) from ex
+    
+    try:
+        setup('upload_docs', '--upload-dir', '-r', index_name, 'docs/build/html')
     except ProcessExecutionError as ex:
         raise ReleaseError(partial=True, index_name=index_name) from ex
     
