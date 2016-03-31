@@ -359,7 +359,7 @@ def _update_requirements_txt(project_root):
     with requirements_txt_path.open('w') as f:
         for name in all_dependencies:  # write ordered
             f.write(requirements_txt_lines[name] + '\n')
-        for name, line in requirements_txt_lines.items():  # write left-overs
+        for name, line in sorted(requirements_txt_lines.items()):  # write left-overs, sorted to avoid unnecessary diffs in git
             if name not in all_dependencies:
                 f.write(line + '\n')
 
@@ -424,7 +424,7 @@ def _get_package_data(pkg_root, packages):
             # Found a data dir
             for parent, _, files in os.walk(str(data_dir)):
                 package_data[package].extend(str((data_dir / parent / file).relative_to(package_dir)) for file in files)
-    return dict(package_data)
+    return {k: sorted(v) for k,v in package_data.items()}  # sort to avoid unnecessary git diffs
         
 setup_py_template = spec.setup_py_header + '''\
 
