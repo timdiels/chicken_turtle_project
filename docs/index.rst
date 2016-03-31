@@ -6,7 +6,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   api/chicken_turtle_project
+   contributor_documentation
 
 
 Indices and tables
