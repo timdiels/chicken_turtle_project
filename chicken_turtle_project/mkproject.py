@@ -385,6 +385,7 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     if 'index_test' in project:
         del project['index_test']
     del project['index_production']
+    del project['human_friendly_name']
     logger.info('Writing setup.py')
     setup_py_path = project_root / 'setup.py'
     with setup_py_path.open('w') as f:
