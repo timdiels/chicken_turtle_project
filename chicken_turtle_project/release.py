@@ -207,7 +207,7 @@ def _release(index_name):
         raise ReleaseError(partial=True, index_name=index_name) from ex
     
     try:
-        setup('upload_docs', '--upload-dir', '-r', index_name, 'docs/build/html')
+        setup('upload_docs', '-r', index_name, '--upload-dir', 'docs/build/html')
     except ProcessExecutionError as ex:
         raise ReleaseError(partial=True, index_name=index_name) from ex
     
