@@ -180,7 +180,8 @@ coveragerc_overwrite = {'run': {'omit': '{pkg_name}/test/*'}}
 #: MANIFEST.in must contain these lines
 manifest_in = '''\
 include {readme_file}
-recursive-include doc *
+recursive-include docs *
+recursive-exclude docs/build *
 '''.splitlines()
 
 #: docs/conf.py must match this format

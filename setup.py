@@ -36,7 +36,6 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
-    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v2.0.3.tar.gz',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
@@ -49,7 +48,6 @@ setup(
                                       'pytest-env',
                                       'pytest-cov',
                                       'pytest-mock']},
-    'human_friendly_name': 'Chicken Turtle Project',
     'install_requires': [   'chicken-turtle-util==1.0.0',
                             'collections-extended',
                             'more-itertools',
@@ -249,8 +247,8 @@ setup(
                         '-  https://packaging.python.org/en/latest/distributing.html\n'
                         '-  https://github.com/pypa/sampleproject\n',
     'name': 'chicken_turtle_project',
-    'package_data': {'chicken_turtle_project': ['data/index.rst', 'data/conf.py', 'data/Makefile']},
+    'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.test'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '2.0.3'}
+    'version': '0.0.0'}
 )
