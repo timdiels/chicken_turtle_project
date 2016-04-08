@@ -108,8 +108,8 @@ _project_files = {
     Path('.gitignore'): 'pattern1\npattern2',
     Path('.coveragerc'): '# mittens coverage_rc',
     Path('operation_mittens/__init__.py'): '# mittens pkg init',
-    Path('operation_mittens/test/__init__.py'): '# mittens test init',
-    Path('operation_mittens/test/conftest.py'): '# mittens conftest',
+    Path('operation_mittens/tests/__init__.py'): '# mittens test init',
+    Path('operation_mittens/tests/conftest.py'): '# mittens conftest',
     Path('requirements.in'): 'pytest\nchecksumdir',
     Path('dev_requirements.in'): '# mittens dev_requirements',
     Path('test_requirements.in'): 'pytest-pep8',
@@ -148,11 +148,11 @@ project1 = Project(_project_py, _format_kwargs, _project_files)
 
 # Extra files (handy to include in some tests)
 extra_files = {
-    Path('operation_mittens/test/test_succeed.py'): dedent('''\
+    Path('operation_mittens/tests/test_succeed.py'): dedent('''\
         def test_succeed():
             pass
         '''),
-    Path('operation_mittens/test/test_fail.py'): dedent('''\
+    Path('operation_mittens/tests/test_fail.py'): dedent('''\
         def test_fail():
             assert False
         ''')
@@ -162,11 +162,11 @@ extra_files = {
 
 # Reusable outside testing too
 
-def write_file(path, contents): # TODO to CTU: path.write. Consider making our class Path(pathlib.Path)
+def write_file(path, contents): # TODO now in CTU: path.write. Consider making our class Path(pathlib.Path)
     with Path(path).open('w') as f:
         f.write(contents)
         
-def read_file(path):
+def read_file(path): #TODO use from CTU
     with Path(path).open('r') as f:
         return f.read()
         

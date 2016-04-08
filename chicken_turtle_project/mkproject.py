@@ -103,7 +103,7 @@ def _main(project_version):
     The following files may be created or updated by merging in changes:
     
     - $project_name/__init__.py
-    - $project_name/test/conftest.py
+    - $project_name/tests/conftest.py
     - .gitignore
     - .coveragerc
     - setup.cfg
@@ -122,7 +122,7 @@ def _main(project_version):
     - LICENSE.txt
     - readme file pointed to by readme_file
     
-    py.test will be configured to run tests in $project_name.test and subpackages.
+    py.test will be configured to run tests in $project_name.tests and subpackages.
     
     All dependencies should be listed in a requirements.in. If you want to
     install dependencies as editable, prefix them with -e and provide a path to
@@ -160,7 +160,7 @@ def _main(project_version):
         _ensure_exists(pkg_root / '__init__.py')
         _update_root_package(pkg_root, format_kwargs)
         
-        test_root = pkg_root / 'test'
+        test_root = pkg_root / 'tests'
         _ensure_exists(test_root / '__init__.py')
         
         conftest_py_path = test_root / 'conftest.py'

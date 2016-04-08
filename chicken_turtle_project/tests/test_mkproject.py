@@ -2,7 +2,7 @@
 ct-mkproject tests
 '''
 
-from chicken_turtle_project.test.common import (
+from chicken_turtle_project.tests.common import (
     create_project, mkproject, project_defaults, write_file, git_, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
     read_file, get_setup_args, extra_files, add_complex_requirements_in
@@ -154,8 +154,8 @@ class _NoRequirement(object):
 #: be created by the user.
 project_file_requirements = {
     Path('operation_mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
-    Path('operation_mittens/test/__init__.py') : _NoRequirement(Permission.create),
-    Path('operation_mittens/test/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
+    Path('operation_mittens/tests/__init__.py') : _NoRequirement(Permission.create),
+    Path('operation_mittens/tests/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
     Path('docs/conf.py') : _SnippetsRequirement(Permission.create, {spec.docs_conf_py}),
     Path('docs/Makefile') : _SnippetsRequirement(Permission.create, {spec.docs_makefile}, format_snippets=False),
     Path('docs/index.rst') : _SnippetsRequirement(Permission.create, {spec.docs_index_rst}),
@@ -350,13 +350,13 @@ class TestSetupPyAndRequirementsTxt(object):
         project.files[Path('my_extra_requirements.in')] = 'checksumdir\npytest-pep8\n'
         del project.files[Path('test_requirements.in')]
         
-        # Create package_data in operation_mittens/test (it actually may be in non-test as well):
-        project.files[Path('operation_mittens/test/data/subdir/file1')] = ''
-        project.files[Path('operation_mittens/test/data/subdir/file2')] = ''
-        project.files[Path('operation_mittens/test/not_data/file')] = ''
-        project.files[Path('operation_mittens/test/not_data/data/file')] = ''
-        project.files[Path('operation_mittens/test/pkg/__init__.py')] = ''
-        project.files[Path('operation_mittens/test/pkg/data/file')] = ''
+        # Create package_data in operation_mittens/tests (it actually may be in non-test as well):
+        project.files[Path('operation_mittens/tests/data/subdir/file1')] = ''
+        project.files[Path('operation_mittens/tests/data/subdir/file2')] = ''
+        project.files[Path('operation_mittens/tests/not_data/file')] = ''
+        project.files[Path('operation_mittens/tests/not_data/data/file')] = ''
+        project.files[Path('operation_mittens/tests/pkg/__init__.py')] = ''
+        project.files[Path('operation_mittens/tests/pkg/data/file')] = ''
         
         #
         create_project(project)
@@ -373,10 +373,10 @@ class TestSetupPyAndRequirementsTxt(object):
             
         assert setup_args['long_description'].strip()
         assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
-        assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.test', 'operation_mittens.test.pkg']
+        assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.tests', 'operation_mittens.tests.pkg']
         assert {k:set(v) for k,v in setup_args['package_data'].items()} == {
-            'operation_mittens.test' : {'data/subdir/file1', 'data/subdir/file2'},
-            'operation_mittens.test.pkg' : {'data/file'},
+            'operation_mittens.tests' : {'data/subdir/file1', 'data/subdir/file2'},
+            'operation_mittens.tests.pkg' : {'data/file'},
         }
         assert set(setup_args['install_requires']) == {'pytest', 'pytest-testmon<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
         assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test', 'dev'}
@@ -428,7 +428,7 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
     
     def create_project(self):
         project = project1.copy()
-        test_succeed_path = Path('operation_mittens/test/test_succeed.py')
+        test_succeed_path = Path('operation_mittens/tests/test_succeed.py')
         project.files = {
             Path('requirements.in'): project.files[Path('requirements.in')],  
             Path('LICENSE.txt'): project.files[Path('LICENSE.txt')],
@@ -465,7 +465,7 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         self.create_project()
         git_('add', '.')
         mkproject & pb.FG  # install pre-commit hook
-        test_fail_path = Path('operation_mittens/test/test_fail.py')
+        test_fail_path = Path('operation_mittens/tests/test_fail.py')
         write_file(test_fail_path, extra_files[test_fail_path])
         git_('commit', '-m', 'message')  # This fails if the untracked test is included
          
@@ -534,9 +534,11 @@ def test_mkdoc(tmpcwd):
     content = read_file('docs/build/html/api/operation_mittens.html')
     assert description in content  # the docstring of the project
 
-# TODO use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
 '''
 TODO
+
+use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
+http://doc.devpi.net/latest/quickstart-pypimirror.html
 
 fix: after each commit, package is left uninstalled in the venv. Perhaps only when it has had test failures
 

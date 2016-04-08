@@ -1,2 +1,3 @@
 [run]
-omit = chicken_turtle_project/test/*
+omit = chicken_turtle_project/tests/*
+

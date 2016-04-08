@@ -134,7 +134,7 @@ pre_commit_hook = '''\
 ct-pre-commit-hook # but don't remove this call
 '''
 
-#: $project/test/conftest.py must contain this
+#: $project/tests/conftest.py must contain this
 conftest_py = '''\
 # http://stackoverflow.com/a/30091579/1031434
 from signal import signal, SIGPIPE, SIG_DFL
@@ -164,7 +164,7 @@ setup_cfg_defaults = {
 #: setup.cfg must set these options to these values
 setup_cfg_overwrite = {
     'pytest': {
-        'testpaths': '{pkg_name}/test',
+        'testpaths': '{pkg_name}/tests',
     },
     'metadata': {
         'description-file': '{readme_file}',
@@ -175,7 +175,7 @@ setup_cfg_overwrite = {
 coveragerc_defaults = {}
 
 #: .coveragerc must set these options to these values
-coveragerc_overwrite = {'run': {'omit': '{pkg_name}/test/*'}}
+coveragerc_overwrite = {'run': {'omit': '{pkg_name}/tests/*'}}
 
 #: MANIFEST.in must contain these lines
 manifest_in = '''\

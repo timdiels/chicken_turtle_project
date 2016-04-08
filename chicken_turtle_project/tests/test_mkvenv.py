@@ -2,7 +2,7 @@
 ct-mkvenv tests
 '''
 
-from chicken_turtle_project.test.common import (
+from chicken_turtle_project.tests.common import (
     create_project, reset_logging, project1
 )
 from chicken_turtle_project.mkvenv import main as _mkvenv

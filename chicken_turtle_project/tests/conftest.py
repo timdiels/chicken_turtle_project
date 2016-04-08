@@ -10,8 +10,8 @@ import pytest
 # http://stackoverflow.com/a/30091579/1031434
 signal(SIGPIPE, SIG_DFL) # Ignore SIGPIPE
 
-#
-@pytest.yield_fixture(scope='function')
+# TODO is CTU.test.temp_dir_cwd
+@pytest.yield_fixture()
 def tmpcwd(tmpdir):
     '''
     Create temp dir make it the current working directory
