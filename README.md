@@ -7,6 +7,21 @@ what can be automated and by verifying manual work against quality requirements.
 Chicken Turtle Project is pre-alpha. None of the interface is stable, meaning
 it may change in the future.
 
+## Links
+- `Documentation <http://pythonhosted.org/chicken_turtle_project/>`_
+- `PyPI <https://pypi.python.org/pypi/chicken_turtle_project/>`_
+- `GitHub <https://github.com/timdiels/chicken_turtle_project/>`_
+
+## Changelist
+
+### v2.1.0 (upcoming)
+
+- Changed: expect tests in ``your_pkg.tests`` instead of ``your_pkg.test``
+- Added: `package_name` to ``project.py``: allows package name and PyPI/index name to be different 
+
+### v2.0.4
+No changelist
+
 ## Usage
 
 ### Getting started

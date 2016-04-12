@@ -72,6 +72,29 @@ setup(
                         'Chicken Turtle Project is pre-alpha. None of the interface is stable,\n'
                         'meaning it may change in the future.\n'
                         '\n'
+                        'Links\n'
+                        '-----\n'
+                        '\n'
+                        '-  ``Documentation <http://pythonhosted.org/chicken_turtle_project/>``\\ \\_\n'
+                        '-  ``PyPI <https://pypi.python.org/pypi/chicken_turtle_project/>``\\ \\_\n'
+                        '-  ``GitHub <https://github.com/timdiels/chicken_turtle_project/>``\\ \\_\n'
+                        '\n'
+                        'Changelist\n'
+                        '----------\n'
+                        '\n'
+                        'v2.1.0 (upcoming)\n'
+                        '~~~~~~~~~~~~~~~~~\n'
+                        '\n'
+                        '-  Changed: expect tests in ``your_pkg.tests`` instead of\n'
+                        '   ``your_pkg.test``\n'
+                        '-  Added: ``package_name`` to ``project.py``: allows package name and\n'
+                        '   PyPI/index name to be different\n'
+                        '\n'
+                        'v2.0.4\n'
+                        '~~~~~~\n'
+                        '\n'
+                        'No changelist\n'
+                        '\n'
                         'Usage\n'
                         '-----\n'
                         '\n'
@@ -248,6 +271,7 @@ setup(
                         '-  https://github.com/pypa/sampleproject\n',
     'name': 'chicken_turtle_project',
     'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
+    'package_name': 'chicken_turtle_project',
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
     'version': '0.0.0'}

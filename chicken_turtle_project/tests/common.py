@@ -21,6 +21,7 @@ git_ = pb.local['git']
 # When a project is created from scratch, these should be the project.py defaults
 project_defaults = dict(
     name='operation-mittens',
+    package_name='operation.mittens',
     human_friendly_name='Operation Mittens',
     description='Short description',
     author='your name',
@@ -66,7 +67,7 @@ project_defaults = dict(
     ''',
     entry_points={
         'console_scripts': [
-            'mycli = operation_mittens.main:main',
+            'mycli = operation.mittens.main:main',
         ],
     },
 )
@@ -98,7 +99,9 @@ _format_kwargs = {
     'name': 'operation-mittens',
     'human_friendly_name': 'Operation Mittens',
     'author' : 'Mittens Glorious',
-    'pkg_name': 'operation_mittens',
+    'pkg_name': 'operation.mittens',
+    'pkg_root': 'operation/mittens',
+    'pkg_root_root': 'operation',
     'version': '0.0.0',
     'readme_file': 'README.md',
     'year': date.today().year,
@@ -107,9 +110,9 @@ _format_kwargs = {
 _project_files = {
     Path('.gitignore'): 'pattern1\npattern2',
     Path('.coveragerc'): '# mittens coverage_rc',
-    Path('operation_mittens/__init__.py'): '# mittens pkg init',
-    Path('operation_mittens/tests/__init__.py'): '# mittens test init',
-    Path('operation_mittens/tests/conftest.py'): '# mittens conftest',
+    Path('operation/mittens/__init__.py'): '# mittens pkg init',
+    Path('operation/mittens/tests/__init__.py'): '# mittens test init',
+    Path('operation/mittens/tests/conftest.py'): '# mittens conftest',
     Path('requirements.in'): 'pytest\nchecksumdir',
     Path('dev_requirements.in'): '# mittens dev_requirements',
     Path('test_requirements.in'): 'pytest-pep8',
@@ -148,11 +151,11 @@ project1 = Project(_project_py, _format_kwargs, _project_files)
 
 # Extra files (handy to include in some tests)
 extra_files = {
-    Path('operation_mittens/tests/test_succeed.py'): dedent('''\
+    Path('operation/mittens/tests/test_succeed.py'): dedent('''\
         def test_succeed():
             pass
         '''),
-    Path('operation_mittens/tests/test_fail.py'): dedent('''\
+    Path('operation/mittens/tests/test_fail.py'): dedent('''\
         def test_fail():
             assert False
         ''')
@@ -171,7 +174,7 @@ def read_file(path): #TODO use from CTU
         return f.read()
         
 import hashlib
-def file_hash(path):
+def file_hash(path): # TODO use CTU.path.hash, it works on dirs too though
     '''
     Get SHA512 checksum of file
     
@@ -186,7 +189,7 @@ def file_hash(path):
         
     See also
     --------
-    checksumdir.dirhash (TODO or change interface such that it allows directories too, derring to dirhash)
+    checksumdir.dirhash (TODO or change interface such that it allows directories too, deferring to dirhash)
     '''
     with path.open('rb') as f:
         hash_ = hashlib.sha512()
@@ -195,7 +198,6 @@ def file_hash(path):
             hash_.update(buffer)
             if not buffer:
                 return hash_.digest()
-            
 
 
 ## setup util ###########################################
@@ -228,7 +230,7 @@ def add_complex_requirements_in(project):
         setup(name='pkg4')
         ''')
     
-def reset_logging(): # TODO add to CTU
+def reset_logging(): # XXX add to CTU, maybe
     '''
     Reset logging to its original state (as if it were freshly imported)
     
@@ -250,6 +252,7 @@ def get_setup_args():
         content = content[content.find('{') : content.rfind('}')+1]
         return eval_string('args=' + content)['args']
 
+# XXX some of these asserts may be good for CTU.test
 @contextmanager
 def assert_file_access(*files, read=None, written=None, stat_changed=None, contents_changed=None):
     '''

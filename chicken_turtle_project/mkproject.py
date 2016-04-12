@@ -144,7 +144,7 @@ def _main(project_version):
         _ensure_project_exists(project_root)
         
         project = get_project(project_root)
-        pkg_root = get_pkg_root(project_root, project['name'])
+        pkg_root = get_pkg_root(project_root, project['package_name'])
         project['version'] = project_version
         
         format_kwargs = {
@@ -152,12 +152,17 @@ def _main(project_version):
             'human_friendly_name': project['human_friendly_name'],
             'author': project['author'],
             'readme_file': project['readme_file'],
-            'pkg_name': pkg_root.name,
+            'pkg_root': str(pkg_root.relative_to(project_root)),
+            'pkg_root_root': str(project['package_name'].split('.')[0]),
+            'pkg_name': project['package_name'],
             'version': project_version,
             'year': date.today().year,
         }
         
-        _ensure_exists(pkg_root / '__init__.py')
+        path = pkg_root
+        while path != project_root:
+            _ensure_exists(path / '__init__.py')
+            path = path.parent
         _update_root_package(pkg_root, format_kwargs)
         
         test_root = pkg_root / 'tests'
@@ -218,13 +223,15 @@ def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'
     if not project_path.exists():
         logger.info('project.py not found, will create from template')
-        name = click.prompt('Please pick a name for your project')
+        name = click.prompt('Please pick a name to register your project (later) with at an index (like PyPI)')
+        pkg_name = name.replace('-', '_')
+        pkg_name = click.prompt('What is the name of the root package? (e.g. {pkg_name} or {pkg_name}.subproject)'.format(pkg_name=pkg_name))
         human_friendly_name = click.prompt('Please pick a human friendly name for your project')
         assert name and name.strip()
         assert human_friendly_name and human_friendly_name.strip()
         with project_path.open('w') as f:
             logger.info('Creating project.py')
-            f.write(spec.project_py.format(name=name, human_friendly_name=human_friendly_name, pkg_name=get_pkg_root(project_root, name).name))
+            f.write(spec.project_py.format(name=name, human_friendly_name=human_friendly_name, pkg_name=pkg_name))
             git_('add', str(project_path))
         
 def _update_root_package(pkg_root, format_kwargs):
@@ -372,7 +379,7 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     project['long_description'] = pypandoc.convert(project['readme_file'], 'rst')
     project['classifiers'] = [line.strip() for line in project['classifiers'].splitlines() if line.strip()] 
     project['packages'] = find_packages()
-    project['package_data'] = _get_package_data(pkg_root, project['packages'])
+    project['package_data'] = _get_package_data(project_root, project['packages'])
     
     # Add download_url if current commit is version tagged
     if project['version'] != _dummy_version:
@@ -416,10 +423,10 @@ def _get_dependencies(project_root):
             extra_requires[name] = dependencies
     return dict(install_requires=install_requires, extras_require=extra_requires)
     
-def _get_package_data(pkg_root, packages):
+def _get_package_data(project_root, packages):
     package_data = defaultdict(list) 
     for package in packages:
-        package_dir = pkg_root.parent / package.replace('.', '/')
+        package_dir = project_root / package.replace('.', '/')
         data_dir = package_dir / 'data'
         if data_dir.exists() and not (data_dir / '__init__.py').exists():
             # Found a data dir

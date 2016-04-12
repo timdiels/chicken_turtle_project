@@ -153,9 +153,9 @@ class _NoRequirement(object):
 #: Each file should exist after a successful run of ct-mkproject. Not all have to
 #: be created by the user.
 project_file_requirements = {
-    Path('operation_mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
-    Path('operation_mittens/tests/__init__.py') : _NoRequirement(Permission.create),
-    Path('operation_mittens/tests/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
+    Path('operation/mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
+    Path('operation/mittens/tests/__init__.py') : _NoRequirement(Permission.create),
+    Path('operation/mittens/tests/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
     Path('docs/conf.py') : _SnippetsRequirement(Permission.create, {spec.docs_conf_py}),
     Path('docs/Makefile') : _SnippetsRequirement(Permission.create, {spec.docs_makefile}, format_snippets=False),
     Path('docs/index.rst') : _SnippetsRequirement(Permission.create, {spec.docs_index_rst}),
@@ -178,7 +178,7 @@ project_file_requirements = {
 def add_docstring(project, docstring):
     for path in (Path('docs/index.rst'), Path('docs/conf.py'), Path('docs/Makefile')):
         del project.files[path]
-    project.files[Path('operation_mittens/meow.py')] = dedent('''\
+    project.files[Path('operation/mittens/meow.py')] = dedent('''\
         def meow_meow():
             '{}'
         '''.format(docstring)
@@ -276,7 +276,7 @@ class TestProjectPy(object):
         # When project.py is missing and git repo exists but has no commits
         create_project()
         remove_file(Path('project.py'))
-        (mkproject << project_defaults['name'] + '\n' + project_defaults['human_friendly_name'] + '\n')()
+        (mkproject << '{name}\n{pkg_name}\n{human_friendly_name}\n'.format(**project1.format_kwargs))()
         
         # Then project.py is created and contains the defaults we want
         project_py_path = Path('project.py')
@@ -350,13 +350,13 @@ class TestSetupPyAndRequirementsTxt(object):
         project.files[Path('my_extra_requirements.in')] = 'checksumdir\npytest-pep8\n'
         del project.files[Path('test_requirements.in')]
         
-        # Create package_data in operation_mittens/tests (it actually may be in non-test as well):
-        project.files[Path('operation_mittens/tests/data/subdir/file1')] = ''
-        project.files[Path('operation_mittens/tests/data/subdir/file2')] = ''
-        project.files[Path('operation_mittens/tests/not_data/file')] = ''
-        project.files[Path('operation_mittens/tests/not_data/data/file')] = ''
-        project.files[Path('operation_mittens/tests/pkg/__init__.py')] = ''
-        project.files[Path('operation_mittens/tests/pkg/data/file')] = ''
+        # Create package_data in operation/mittens/tests (it actually may be in non-test as well):
+        project.files[Path('operation/mittens/tests/data/subdir/file1')] = ''
+        project.files[Path('operation/mittens/tests/data/subdir/file2')] = ''
+        project.files[Path('operation/mittens/tests/not_data/file')] = ''
+        project.files[Path('operation/mittens/tests/not_data/data/file')] = ''
+        project.files[Path('operation/mittens/tests/pkg/__init__.py')] = ''
+        project.files[Path('operation/mittens/tests/pkg/data/file')] = ''
         
         #
         create_project(project)
@@ -373,10 +373,10 @@ class TestSetupPyAndRequirementsTxt(object):
             
         assert setup_args['long_description'].strip()
         assert set(setup_args['classifiers']) == {'Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: Implementation :: Stackless'}
-        assert setup_args['packages'] == ['operation_mittens', 'operation_mittens.tests', 'operation_mittens.tests.pkg']
+        assert set(setup_args['packages']) == {'operation', 'operation.mittens', 'operation.mittens.tests', 'operation.mittens.tests.pkg'}
         assert {k:set(v) for k,v in setup_args['package_data'].items()} == {
-            'operation_mittens.tests' : {'data/subdir/file1', 'data/subdir/file2'},
-            'operation_mittens.tests.pkg' : {'data/file'},
+            'operation.mittens.tests' : {'data/subdir/file1', 'data/subdir/file2'},
+            'operation.mittens.tests.pkg' : {'data/file'},
         }
         assert set(setup_args['install_requires']) == {'pytest', 'pytest-testmon<5.0.0', 'pytest-env==0.6', 'pkg4', 'pytest-cov'}
         assert set(setup_args['extras_require'].keys()) == {'my_extra', 'test', 'dev'}
@@ -428,7 +428,7 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
     
     def create_project(self):
         project = project1.copy()
-        test_succeed_path = Path('operation_mittens/tests/test_succeed.py')
+        test_succeed_path = Path('operation/mittens/tests/test_succeed.py')
         project.files = {
             Path('requirements.in'): project.files[Path('requirements.in')],  
             Path('LICENSE.txt'): project.files[Path('LICENSE.txt')],
@@ -465,7 +465,7 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         self.create_project()
         git_('add', '.')
         mkproject & pb.FG  # install pre-commit hook
-        test_fail_path = Path('operation_mittens/tests/test_fail.py')
+        test_fail_path = Path('operation/mittens/tests/test_fail.py')
         write_file(test_fail_path, extra_files[test_fail_path])
         git_('commit', '-m', 'message')  # This fails if the untracked test is included
          
@@ -529,9 +529,9 @@ def test_mkdoc(tmpcwd):
     content = read_file('docs/build/html/index.html')
     assert '0.0.0' in content  # correct version
     assert project.project_py['human_friendly_name'] in content  # human friendly project name
-    assert 'operation_mittens.meow' in content
+    assert 'operation package' in content
     
-    content = read_file('docs/build/html/api/operation_mittens.html')
+    content = read_file('docs/build/html/api/operation.mittens.html')
     assert description in content  # the docstring of the project
 
 '''

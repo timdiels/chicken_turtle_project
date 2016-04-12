@@ -30,11 +30,11 @@ def test_sip_install(tmpcwd):
     project = project1.copy()
     project.project_py['entry_points'] = {
         'console_scripts': [
-            'mycli = operation_mittens.main:main',
+            'mycli = operation.mittens.main:main',
         ],
     }
     project.files[Path('requirements.in')] = 'pytest\nsip==4.17\nPyQt5==5.5.1\n'
-    project.files[Path('operation_mittens/main.py')] = dedent('''\
+    project.files[Path('operation/mittens/main.py')] = dedent('''\
         import pytest
         import PyQt5
         

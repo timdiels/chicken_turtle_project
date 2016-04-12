@@ -18,9 +18,10 @@
 from signal import signal, SIGPIPE, SIG_DFL
 from contextlib import contextmanager
 from chicken_turtle_util.exceptions import UserException
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 from pathlib import Path
 from glob import glob
+from chicken_turtle_project.specification import project_py_required_attributes, project_py_optional_attributes
 import plumbum as pb
 import shutil
 import git
@@ -57,19 +58,16 @@ def get_project(project_root):
     except KeyError:
         raise UserException('project.py must export a `project` variable (with a dict)')
     
-    required_attributes = {'name', 'human_friendly_name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
-    optional_attributes = {'entry_points', 'index_test'}
-    
     # Attributes that must be present    
-    for attr in required_attributes:
+    for attr in project_py_required_attributes:
         if attr not in project:
             raise UserException('Missing required attribute: project["{}"]'.format(attr))
         
-    pkg_root = project_root / project['name']
+    pkg_root = get_pkg_root(project_root, project['package_name'])
 
     # Attributes that should not be present
     if 'version' in project:
-        raise UserException('Encountered `version` in `project`. Version should be specified in {}/version.py as `__version__=...`, not in project.py'.format(pkg_root))
+        raise UserException('Encountered `version` in `project`. Version should be specified as an argument to ct-release, not in project.py')
     elif 'package_data' in project:
         raise UserException('Encountered `package_data` in `project`. This is auto-generated, remove it. If your data directories are named `data`, have no `__init__.py` and are part of a package in {}, they will be included by auto generation.'.format(pkg_root))
     elif 'packages' in project:
@@ -81,7 +79,7 @@ def get_project(project_root):
     elif 'install_requires' in project:
         raise UserException('Encountered `install_requires` in `project`. Specify these in requirements.in instead.')
     else:
-        for unknown_attr in set(project.keys()) - required_attributes - optional_attributes:
+        for unknown_attr in set(project.keys()) - project_py_required_attributes - project_py_optional_attributes:
             raise UserException('Encountered unknown attribute `{}` in `project`. Please remove it.'.format(unknown_attr))
         
     # Ensure values are non-empty
@@ -195,8 +193,8 @@ def get_dependency_name(editable, url):
         
     return name.lower().replace('_', '-')
 
-def get_pkg_root(project_root, project_name):
-    return project_root / project_name.replace('-', '_')
+def get_pkg_root(project_root, package_name):
+    return project_root / package_name.replace('.', '/')
     
 #: lower-case names of known SIP packages mapped to a sentinel package to detect whether they're installed
 sip_packages = {
@@ -212,7 +210,7 @@ def get_dependency_file_paths(project_root):
     assert paths
     return paths
 
-def remove_file(path): #TODO move to CTU: path.remove()
+def remove_file(path): #XXX moved to CTU, use it: path.remove()
     '''
     Remove file or directory (recursively)
     

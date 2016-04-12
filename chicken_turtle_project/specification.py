@@ -34,7 +34,8 @@ setup_py_header = '''\
 project_py= """
 project = dict(
     # Changing these attributes is not supported (you'll have to manually move and edit files)
-    name='{name}',  # PyPI name. `name.replace('-', '_')` will be used in all other places instead
+    name='{name}',  # PyPI (or other index) name.
+    package_name='{pkg_name}',  # name of the root package of this project, e.g. 'myproject' or 'myproject.subproject' 
     human_friendly_name='{human_friendly_name}',
     
     #
@@ -164,7 +165,7 @@ setup_cfg_defaults = {
 #: setup.cfg must set these options to these values
 setup_cfg_overwrite = {
     'pytest': {
-        'testpaths': '{pkg_name}/tests',
+        'testpaths': '{pkg_root}/tests',
     },
     'metadata': {
         'description-file': '{readme_file}',
@@ -175,7 +176,7 @@ setup_cfg_overwrite = {
 coveragerc_defaults = {}
 
 #: .coveragerc must set these options to these values
-coveragerc_overwrite = {'run': {'omit': '{pkg_name}/tests/*'}}
+coveragerc_overwrite = {'run': {'omit': '{pkg_root}/tests/*'}}
 
 #: MANIFEST.in must contain these lines
 manifest_in = '''\
@@ -192,3 +193,9 @@ docs_makefile = resource_string(__name__, 'data/Makefile').decode('utf-8')
 
 #: docs/index.rst must match this format
 docs_index_rst = resource_string(__name__, 'data/index.rst').decode('utf-8')
+
+#: project.py:project must have these keys
+project_py_required_attributes = {'name', 'package_name', 'human_friendly_name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
+
+#: project.py:project may have these keys
+project_py_optional_attributes = {'entry_points', 'index_test'}

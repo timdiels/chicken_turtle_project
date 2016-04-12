@@ -36,7 +36,7 @@ def create_release_project(project=project1, test_index=True):
     Create valid project for release
     '''
     project = project.copy()
-    test_succeed_path = Path('operation_mittens/tests/test_succeed.py')
+    test_succeed_path = Path('operation/mittens/tests/test_succeed.py')
     project.files[test_succeed_path] = extra_files[test_succeed_path] 
     if test_index:
         project.project_py['index_test'] = 'pypitest'
@@ -74,7 +74,7 @@ def test_ignore_untracked(tmpcwd):
     When working directory is dirty, ignore untracked files
     '''
     create_release_project()
-    test_fail_path = Path('operation_mittens/tests/test_fail.py')
+    test_fail_path = Path('operation/mittens/tests/test_fail.py')
     write_file(test_fail_path, extra_files[test_fail_path])
     result = release('1.0.0')
     assert result.exit_code == 0, result.output
