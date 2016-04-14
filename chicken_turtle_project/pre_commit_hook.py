@@ -1,9 +1,11 @@
-from chicken_turtle_project.common import remove_file, init_logging, graceful_main
+from chicken_turtle_project.common import remove_file, init_logging, graceful_main, get_project
 from chicken_turtle_project import __version__
 from pathlib import Path
 import plumbum as pb
 import click
 from tempfile import mkdtemp
+import shutil
+from glob import glob
 
 import logging
 logger = logging.getLogger(__name__)
@@ -30,6 +32,10 @@ def main():
                 git_('checkout-index', '-a', '-f', '--prefix', str(temp_dir) + '/')
             
             project_root = _get_abs_path_from_env('GIT_WORKING_TREE')
+            project = get_project(project_root)
+            for pattern in project['pre_commit_no_ignore']:
+                for file in glob(pattern):
+                    pb.path.utils.copy(file, str(temp_dir / file))
             venv_dir = Path(pb.local.env.get('CT_VENV_DIR', str(project_root / 'venv'))).absolute()
             env_context = pb.local.env(
                 GIT_DIR=str(_get_abs_path_from_env('GIT_DIR')),

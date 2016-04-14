@@ -317,6 +317,8 @@ class TestProjectPy(object):
             
     _parameters = set(itertools.product(project1.project_py.keys(), ('', None, ' ', '\t'))) # most attributes may not be empty or None
     _parameters.add(('name', 'white space'))
+    _parameters.add(('pre_commit_no_ignore', ('sneaky/../../*',)))  # must stay below project_root
+    _parameters.add(('pre_commit_no_ignore', ('/not/so/sneaky',)))  # must be relative path, even if the abs happens to point to project_root or lower
     
     @pytest.mark.parametrize('attr,value', _parameters)
     def test_attr_has_invalid_value(self, tmpcwd, attr, value):
@@ -426,7 +428,8 @@ class TestSetupPyAndRequirementsTxt(object):
     
 class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit hook -> test_pre_commit_hook
     
-    def create_project(self):
+    @property
+    def project(self):
         project = project1.copy()
         test_succeed_path = Path('operation/mittens/tests/test_succeed.py')
         project.files = {
@@ -435,7 +438,10 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
             Path('README.md'): project.files[Path('README.md')],
             test_succeed_path: extra_files[test_succeed_path],
         }
-        create_project(project)
+        return project
+        
+    def create_project(self):
+        create_project(self.project)
     
     def test_invalid_project(self, tmpcwd):
         '''
@@ -482,6 +488,34 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         # Expected change happened and is part of the commit
         git_('reset', '--hard')
         assert get_setup_args()['install_requires'] == ['pytest']
+            
+    def test_no_ignore(self, tmpcwd):
+        '''
+        When well-behaved pre_commit_no_ignore, copy matched files to pre-commit
+        tmp dir
+        '''
+        project = self.project
+        project.project_py['pre_commit_no_ignore'] = ['operation/mittens/test/mah_*']
+        project.files[Path('operation/mittens/test/mah_file')] = 'content'
+        project.files[Path('operation/mittens/test/mah_dir/some_file')] = 'some file content'
+        project.files[Path('operation/mittens/test/test_it.py')] = dedent('''\
+            from pathlib import Path
+            def test_it():
+                # file is there
+                dir = Path(__file__).parent
+                with (dir / 'mah_file').open('r') as f:
+                    assert f.read() == 'content'
+                    
+                # recursively copied directory is there
+                with (dir / 'mah_dir/some_file').open('r') as f:
+                    assert f.read() == 'some file content'
+            ''')
+        create_project(project)
+        mkproject() # install pre commit hook
+        git_('add', '.')
+        git_('reset', 'operation/mittens/test/mah_file')
+        git_('reset', 'operation/mittens/test/mah_dir')
+        git_('commit', '-m', 'message') # run pre-commit
             
     def test_invalid_documentation(self, tmpcwd):
         '''When a docstring contains an error, mkdoc exits non-zero and pre-commit aborts'''

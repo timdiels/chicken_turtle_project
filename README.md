@@ -17,7 +17,11 @@ it may change in the future.
 ### v2.1.0 (upcoming)
 
 - Changed: expect tests in ``your_pkg.tests`` instead of ``your_pkg.test``
-- Added: `package_name` to ``project.py``: allows package name and PyPI/index name to be different 
+- Added:
+
+  - `project.py:package_name`: allows package name and PyPI/index name to be different 
+  - `project.py:pre_commit_no_ignore`: files not to ignore in precommit checks,
+    despite them not being tracked by git. 
 
 ### v2.0.4
 No changelist

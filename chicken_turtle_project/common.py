@@ -86,10 +86,14 @@ def get_project(project_root):
     for attr in project:
         if not project[attr]:
             raise UserException('Attribute `{}` may not be None'.format(attr))
-        if attr != 'entry_points':
+        if attr not in ('entry_points', 'pre_commit_no_ignore'):
             project[attr] = project[attr].strip()
             if not project[attr]:
                 raise UserException('Attribute `{}` may not be empty or whitespace'.format(attr))
+            
+    # Set defaults for missing optional attributes
+    if 'pre_commit_no_ignore' not in project:
+        project['pre_commit_no_ignore'] = []
         
     # Validate project name
     if re.search('\s', project['name']):
@@ -102,7 +106,12 @@ def get_project(project_root):
     # Validate readme_file
     if not re.fullmatch('(.*/)?README.[a-z0-9]+', project['readme_file']):
         raise UserException('Attribute `readme_file` must be a path with as file name "README.*", case sensitive with a lower case extension')
-            
+    
+    # Validate pre_commit_no_ignore
+    for pattern in project['pre_commit_no_ignore']:
+        depth = -sum(x == '..' for x in pattern.split('/') if x)  # e.g. 0 is $project_root, -1 is $project_root/..
+        if pattern.startswith('/') or depth < 0:
+            raise UserException('pre_commit_no_ignore pattern is not relative to project root (where project.py is): {!r}'.format(pattern))        
     return project
     
 def init_logging(debug=False):

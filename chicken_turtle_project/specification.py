@@ -54,7 +54,7 @@ project = dict(
     # These names refer to those defined in ~/.pypirc.
     # For pypi, see http://peterdowns.com/posts/first-time-with-pypi.html
     # For devpi, see http://doc.devpi.net/latest/userman/devpi_misc.html#using-plain-setup-py-for-uploading
-    index_test = 'pypitest',  # Index to use for testing a release, before releasing to `index_production`. `index_test` can be set to None if you have no test index
+    index_test = 'pypitest',  # Index to use for testing a release, before releasing to `index_production`. `index_test` can be omitted if you have no test index
     index_production = 'pypi',
     
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -92,12 +92,34 @@ project = dict(
         Programming Language :: Python :: Implementation :: Stackless
     ''',
  
-    # Auto generate entry points
+    # Auto generate entry points (optional)
     entry_points={{
         'console_scripts': [
             'mycli = {pkg_name}.main:main', # just an example, any module will do, this template doesn't care where you put it
         ],
     }},
+    
+    # pre_commit_no_ignore (optional):
+    #
+    # Files not to ignore in pre commit checks, despite them not being tracked by
+    # git.
+    #
+    # Before a commit, project files are updated (ct-mkproject), the venv is
+    # updated (ct-mkvenv), tests are run and documentation generation is checked
+    # for errors. This process (intentionally) ignores any untracked files.
+    # In order to include files needed by this process that you do not wish to
+    # have tracked (e.g. files with passwords such as some test configurations),
+    # you must add them to `pre_commit_no_ignore`.
+    #
+    # List of glob patterns relative to this file. You may not refer to files
+    # outside the project directory (i.e. no higher than project.py).
+    #
+    # For supported glob syntax, see Python `glob.glob(recursive=False)`. Note
+    # there is no need for ``**`` as no- ignores are recursive.
+    pre_commit_no_ignore = [
+        'test.conf',
+        'secrets/*',
+    ]
 )
 """
 
@@ -198,4 +220,4 @@ docs_index_rst = resource_string(__name__, 'data/index.rst').decode('utf-8')
 project_py_required_attributes = {'name', 'package_name', 'human_friendly_name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
 
 #: project.py:project may have these keys
-project_py_optional_attributes = {'entry_points', 'index_test'}
+project_py_optional_attributes = {'entry_points', 'index_test', 'pre_commit_no_ignore'}

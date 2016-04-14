@@ -87,8 +87,12 @@ setup(
                         '\n'
                         '-  Changed: expect tests in ``your_pkg.tests`` instead of\n'
                         '   ``your_pkg.test``\n'
-                        '-  Added: ``package_name`` to ``project.py``: allows package name and\n'
-                        '   PyPI/index name to be different\n'
+                        '-  Added:\n'
+                        '\n'
+                        '-  ``project.py:package_name``: allows package name and PyPI/index name\n'
+                        '   to be different\n'
+                        '-  ``project.py:pre_commit_no_ignore``: files not to ignore in precommit\n'
+                        '   checks, despite them not being tracked by git.\n'
                         '\n'
                         'v2.0.4\n'
                         '~~~~~~\n'
@@ -273,6 +277,7 @@ setup(
     'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
     'package_name': 'chicken_turtle_project',
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
+    'pre_commit_no_ignore': [],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
     'version': '0.0.0'}
 )

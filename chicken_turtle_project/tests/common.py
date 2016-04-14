@@ -2,6 +2,7 @@
 common test setup, assertions and utilities
 '''
 
+from chicken_turtle_project import specification
 from chicken_turtle_project.common import eval_string
 from contextlib import contextmanager
 from checksumdir import dirhash
@@ -70,6 +71,10 @@ project_defaults = dict(
             'mycli = operation.mittens.main:main',
         ],
     },
+    pre_commit_no_ignore = [
+        'test.conf',
+        'secrets/*',
+    ]
 )
 
 # Project templates
@@ -85,8 +90,8 @@ class Project(object):
 
 # Project 1
 _project_py = project_defaults.copy()
-del _project_py['entry_points']
-del _project_py['index_test']
+for name in specification.project_py_optional_attributes:
+    del _project_py[name]
 _project_py.update(
     author='Mittens Glorious',
     author_email='mittens@test.com',
