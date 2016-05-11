@@ -19,7 +19,7 @@ Links
 Changelist
 ==========
 
-v2.1.1
+v2.1.2
 ------
 
 - Changed: expect tests in ``your_pkg.tests`` instead of ``your_pkg.test``
