@@ -36,7 +36,6 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
-    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v2.1.0.tar.gz',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
@@ -83,7 +82,7 @@ setup(
                         'Changelist\n'
                         '==========\n'
                         '\n'
-                        'v2.1.0\n'
+                        'v2.1.1\n'
                         '------\n'
                         '\n'
                         '-  Changed: expect tests in ``your_pkg.tests`` instead of\n'
@@ -101,9 +100,7 @@ setup(
                         'No changelist\n',
     'name': 'chicken_turtle_project',
     'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
-    'package_name': 'chicken_turtle_project',
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
-    'pre_commit_no_ignore': [],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '2.1.0'}
+    'version': '0.0.0'}
 )
