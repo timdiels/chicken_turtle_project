@@ -1,5 +1,5 @@
 project = dict(
-    readme_file='README.md',
+    readme_file='README.rst',
     
     # overridden
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -7,7 +7,7 @@ project = dict(
     classifiers='''
         Natural Language :: English
         Intended Audience :: Developers
-        Development Status :: 2 - Pre-Alpha
+        Development Status :: 3 - Alpha
         Topic :: Software Development
         Operating System :: POSIX
         Operating System :: POSIX :: AIX
