@@ -31,10 +31,14 @@ date and valid at each commit.
 
 This ensures that for all of your (future) commits:
 
-- there is a requirements.txt with pinned versions for which all tests succeed in a virtual env
 - there are no errors in the documentation (i.e. sphinx-build encounters no errors or warnings)
-- there is a LICENSE.txt, a readme file, ...
+- there is a LICENSE.txt, a README file, ...
 - the version is up to date across the project
+
+Further, it is guaranteed that any release commit can be checked out and having run ct-mkvenv,
+all tests will succeed. This also holds for non-release commits with no editable requirements.
+(editable requirements cannot be pinned in requirements.txt, so when you later revisit such a
+commit, the editable requirement may have changed (e.g. an amended commit)).
 
 
 Managing dependencies

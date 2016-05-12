@@ -38,3 +38,12 @@ For these reasons, we default to using xdist instead of testmon. We may revisit
 testmon once it supports xdist. You can still install and use --testmon
 yourself, you probably shouldn't add --testmon to setup.cfg though as that would
 allow for commits with failing tests.
+
+It is guaranteed that any release commit can be checked out and by installing
+requirements.txt, all tests will succeed. We cannot guarantee this for commits
+with editable requirements. We could require one to first ensure the editable
+requirement's repo is clean, and the commit has been pushed. We could then pin
+onto that particular commit. But this is too restrictive; you would no longer
+be able to amend or rebase commits in editable requirements as you need to push
+it as soon as you use it in another repo you are working on. 
+
