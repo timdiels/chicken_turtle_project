@@ -24,6 +24,7 @@ v2.2.0 (upcoming)
 
 - Changed: more user friendly errors
 - Added: `project.py::python_version`: allows specifying which Python version to use for the venv and testing
+- Fixed: the project's package was missing from venv after each commit.  
 
 
 v2.1.2

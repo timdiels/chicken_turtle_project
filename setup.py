@@ -88,6 +88,7 @@ setup(
                         '-  Changed: more user friendly errors\n'
                         '-  Added: \\`project.py::python\\_version\\`: allows specifying which\n'
                         '   Python version to use for the venv and testing\n'
+                        "-  Fixed: the project's package was missing from venv after each commit.\n"
                         '\n'
                         'v2.1.2\n'
                         '------\n'

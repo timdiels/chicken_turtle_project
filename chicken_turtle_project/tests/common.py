@@ -208,15 +208,21 @@ def file_hash(path): # TODO use CTU.path.hash, it works on dirs too though
 
 ## setup util ###########################################
 
+def write_project_py(project_py):
+    write_file(Path('project.py'), 'project = ' + pprint.pformat(project_py))
+    
 def create_project(project=project1):
     '''
     Create project 1 with all required, optional and generated files for ct-mkproject, and init git but leave everything untracked
     '''
-    write_file(Path('project.py'), 'project = ' + pprint.pformat(project.project_py))
+    update_project(project)
+    git_('init')
+    
+def update_project(project):
+    write_project_py(project.project_py)
     for path, content in  project.files.items():
         os.makedirs(str(path.parent), exist_ok=True)
         write_file(path, content)
-    git_('init')
     
 def add_complex_requirements_in(project):
     project.files[Path('requirements.in')] = dedent('''\

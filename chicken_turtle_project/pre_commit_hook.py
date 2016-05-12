@@ -4,8 +4,8 @@ from pathlib import Path
 import plumbum as pb
 import click
 from tempfile import mkdtemp
-import shutil
 from glob import glob
+from contextlib import suppress
 
 import logging
 logger = logging.getLogger(__name__)
@@ -42,18 +42,23 @@ def main():
                 GIT_INDEX_FILE=str(_get_abs_path_from_env('GIT_INDEX_FILE')),
                 CT_VENV_DIR=str(venv_dir),
             ) 
-            with env_context, pb.local.cwd(str(temp_dir)):
-                # Check documentation for errors (which also updates the venv, which we rely on)
-                pb.local['ct-mkdoc'] & pb.FG
-                
-                # Forget about Git and Chicken Turtle environment before running tests
-                bad_env_vars = [k for k in pb.local.env.keys() if k.startswith('GIT_') or k.startswith('CT_')]
-                for name in bad_env_vars:
-                    del pb.local.env[name]
-
-                # Run tests
-                pb.local[str(venv_dir / 'bin/py.test')] & pb.FG(retcode=(0,5))
-            
+            try:
+                with env_context, pb.local.cwd(str(temp_dir)):
+                    # Check documentation for errors (which also updates the venv, which we rely on)
+                    pb.local['ct-mkdoc'] & pb.FG
+                    
+                    # Forget about Git and Chicken Turtle environment before running tests
+                    bad_env_vars = [k for k in pb.local.env.keys() if k.startswith('GIT_') or k.startswith('CT_')]
+                    for name in bad_env_vars:
+                        del pb.local.env[name]
+    
+                    # Run tests
+                    pb.local[str(venv_dir / 'bin/py.test')] & pb.FG(retcode=(0,5))
+            finally:
+                # Restore venv dir
+                with pb.local.cwd(str(project_root)):
+                    with suppress(pb.commands.ProcessExecutionError): # if restoring fails, commit should still continue
+                        pb.local['ct-mkvenv']('--no-mkproject')
         finally:
             remove_file(temp_dir)
             

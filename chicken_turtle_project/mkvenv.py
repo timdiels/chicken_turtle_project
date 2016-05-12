@@ -22,8 +22,9 @@ class SIPDependency(_SIPDependency):
             return self.name == str(other).lower()
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@click.option('--no-mkproject', is_flag=True)
 @click.version_option(version=__version__)
-def main():
+def main(**kwargs):
     '''
     Create Python virtual environment in `./venv` and install project in it.
     
@@ -31,10 +32,11 @@ def main():
     '''
     init_logging(debug=False)
     with graceful_main(logger):
-        _main()
+        _main(**kwargs)
     
-def _main():
-    pb.local['ct-mkproject'] & pb.FG  # Ensure requirements.in files, ... are up to date
+def _main(no_mkproject):
+    if not no_mkproject:
+        pb.local['ct-mkproject']()  # Ensure requirements.in files, ... are up to date
     
     project_root = Path.cwd()
     project = get_project(project_root)

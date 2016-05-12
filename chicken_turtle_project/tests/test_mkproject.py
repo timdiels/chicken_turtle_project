@@ -5,7 +5,8 @@ ct-mkproject tests
 from chicken_turtle_project.tests.common import (
     create_project, mkproject, project_defaults, write_file, git_, project1,
     assert_directory_contents, assert_process_fails, assert_file_access,
-    read_file, get_setup_args, extra_files, add_complex_requirements_in
+    read_file, get_setup_args, extra_files, add_complex_requirements_in,
+    update_project
 )
 from contextlib import ExitStack
 from chicken_turtle_project.common import eval_file, parse_requirements_file, get_dependency_name, remove_file
@@ -449,6 +450,27 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         
     def create_project(self):
         create_project(self.project)
+        
+    def test_happy_days(self, tmpcwd):
+        '''
+        If all well, commit
+        '''
+        project = self.project
+        create_project(project)
+        mkproject & pb.FG  # install pre-commit hook
+        git_('add', '.')
+        
+        project.project_py['entry_points'] = {
+            'console_scripts': [
+                'mycli = operation.mittens.main:main',
+            ],
+        }
+        project.files[Path('operation/mittens/main.py')] = 'def main(): pass'
+        update_project(project)  # without staging it
+        mkproject()
+        
+        git_('commit', '-m', 'message')  # runs the hook
+        pb.local['sh']('-c', '. venv/bin/activate; mycli')  # mycli should be available in the venv, even though it wasn't part of the commit (it shouldn't be available in the venv during the pre-commit test run)
     
     def test_invalid_project(self, tmpcwd):
         '''
