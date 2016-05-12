@@ -22,9 +22,8 @@ Changelist
 v2.2.0 (upcoming)
 -----------------
 
-- Added:
-
-  - `project.py::python_version`: allows specifying which Python version to use for the venv and testing
+- Changed: more user friendly errors
+- Added: `project.py::python_version`: allows specifying which Python version to use for the venv and testing
 
 
 v2.1.2

@@ -132,6 +132,9 @@ def graceful_main(logger):
     signal(SIGPIPE, SIG_DFL)  # Ignore SIGPIPE, http://stackoverflow.com/a/30091579/1031434
     try:
         yield
+    except pb.commands.ProcessExecutionError as ex:
+        logger.error('Command failed\n' + str(ex))
+        sys.exit(3)
     except UserException as ex:
         logger.error(ex.message)
         sys.exit(1)
