@@ -86,7 +86,7 @@ def get_project(project_root):
     for attr in project:
         if not project[attr]:
             raise UserException('Attribute `{}` may not be None'.format(attr))
-        if attr not in ('entry_points', 'pre_commit_no_ignore'):
+        if attr not in ('entry_points', 'pre_commit_no_ignore', 'python_version'):
             project[attr] = project[attr].strip()
             if not project[attr]:
                 raise UserException('Attribute `{}` may not be empty or whitespace'.format(attr))
@@ -111,7 +111,13 @@ def get_project(project_root):
     for pattern in project['pre_commit_no_ignore']:
         depth = -sum(x == '..' for x in pattern.split('/') if x)  # e.g. 0 is $project_root, -1 is $project_root/..
         if pattern.startswith('/') or depth < 0:
-            raise UserException('pre_commit_no_ignore pattern is not relative to project root (where project.py is): {!r}'.format(pattern))        
+            raise UserException('pre_commit_no_ignore pattern is not relative to project root (where project.py is): {!r}'.format(pattern))
+        
+    # Validate python_version
+    project['python_version'] = tuple(project['python_version'])
+    version = project['python_version']
+    if len(version) != 2 or not isinstance(version[0], int) or not isinstance(version[1], int) or version[0] < 0 or version[1] < 0:
+        raise UserException('python_version must be a tuple of (major>0, minor>0), e.g. (3,5): {!r}'.format(pattern))
     return project
     
 def init_logging(debug=False):

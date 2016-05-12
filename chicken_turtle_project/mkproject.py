@@ -395,6 +395,7 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     del project['human_friendly_name']
     del project['pre_commit_no_ignore']
     del project['package_name']
+    del project['python_version']
     logger.info('Writing setup.py')
     setup_py_path = project_root / 'setup.py'
     with setup_py_path.open('w') as f:

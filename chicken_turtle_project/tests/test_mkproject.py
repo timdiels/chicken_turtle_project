@@ -319,6 +319,13 @@ class TestProjectPy(object):
     _parameters.add(('name', 'white space'))
     _parameters.add(('pre_commit_no_ignore', ('sneaky/../../*',)))  # must stay below project_root
     _parameters.add(('pre_commit_no_ignore', ('/not/so/sneaky',)))  # must be relative path, even if the abs happens to point to project_root or lower
+    _parameters.add(('python_version', ()))
+    _parameters.add(('python_version', (3)))
+    _parameters.add(('python_version', (3,5,0)))
+    _parameters.add(('python_version', (3,-1)))
+    _parameters.add(('python_version', (-1,1)))
+    _parameters.add(('python_version', ('3',5)))
+    _parameters.add(('python_version', (3,'5')))
     
     @pytest.mark.parametrize('attr,value', _parameters)
     def test_attr_has_invalid_value(self, tmpcwd, attr, value):

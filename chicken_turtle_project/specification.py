@@ -42,6 +42,7 @@ project = dict(
     description='Short description',
     author='your name',  # will appear in copyright mentioned in documentation: 'year, your name'
     author_email='your_email@example.com',
+    python_version=(3,5),  # python (major, minor) version to use to create the venv and to test with. E.g. (3,5) for python 3.5.x. Only being able to pick a single version is a current shortcoming of Chicken Turtle Project.
     readme_file='README.md',
     url='https://example.com/project/home', # project homepage
     download_url='https://example.com/repo/{{version}}', # Template for url to download source archive from. You can refer to the current version with {{version}}. You can get one from github or gitlab for example.
@@ -217,7 +218,7 @@ docs_makefile = resource_string(__name__, 'data/Makefile').decode('utf-8')
 docs_index_rst = resource_string(__name__, 'data/index.rst').decode('utf-8')
 
 #: project.py:project must have these keys
-project_py_required_attributes = {'name', 'package_name', 'human_friendly_name', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
+project_py_required_attributes = {'name', 'package_name', 'human_friendly_name', 'python_version', 'readme_file', 'description', 'author', 'author_email', 'url', 'license', 'classifiers', 'keywords', 'download_url', 'index_production'}
 
 #: project.py:project may have these keys
 project_py_optional_attributes = {'entry_points', 'index_test', 'pre_commit_no_ignore'}

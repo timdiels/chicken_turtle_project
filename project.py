@@ -41,6 +41,7 @@ project = dict(
     name='chicken_turtle_project',
     package_name='chicken_turtle_project',
     human_friendly_name='Chicken Turtle Project',
+    python_version=(3,4),
     description="Python 3 project development tools",
     author='Tim Diels',
     author_email='timdiels.m@gmail.com',

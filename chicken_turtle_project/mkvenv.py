@@ -1,7 +1,7 @@
 from chicken_turtle_project.common import (
     graceful_main, init_logging, get_dependency_file_paths, 
     parse_requirements_file, is_sip_dependency, get_dependency_name,
-    parse_requirements, sip_packages, remove_file
+    parse_requirements, sip_packages, remove_file, get_project
 )
 from chicken_turtle_project import __version__
 import click
@@ -37,13 +37,14 @@ def _main():
     pb.local['ct-mkproject'] & pb.FG  # Ensure requirements.in files, ... are up to date
     
     project_root = Path.cwd()
+    project = get_project(project_root)
     venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()
     
     # Create venv if missing
     if not venv_dir.exists():
         # Find the desired Python
-        desired_python = 'python3.4'
-        python = pb.local.get(desired_python, 'python3', 'python')
+        desired_python = 'python{}.{}'.format(*project['python_version'])
+        python = pb.local.get(desired_python, 'python{}'.format(project['python_version'][0]), 'python')
         if python.executable.name != desired_python:
             logger.warning('{} not found, falling back to {}'.format(desired_python, python.executable))
         

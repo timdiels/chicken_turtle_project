@@ -48,6 +48,7 @@ def test_sip_install(tmpcwd):
     # When mkvenv, all good
     result = mkvenv()
     assert result.exit_code == 0, result.output
+    assert Path('venv/bin/python3.5').exists() # project.py requested python version 3.5
     
     # When call mycli, all good
     stdout = pb.local['venv/bin/mycli']()

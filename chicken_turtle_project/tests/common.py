@@ -24,6 +24,7 @@ project_defaults = dict(
     name='operation-mittens',
     package_name='operation.mittens',
     human_friendly_name='Operation Mittens',
+    python_version=(3,5),
     description='Short description',
     author='your name',
     author_email='your_email@example.com',
