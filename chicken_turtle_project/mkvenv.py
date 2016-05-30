@@ -22,21 +22,21 @@ class SIPDependency(_SIPDependency):
             return self.name == str(other).lower()
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--no-mkproject', is_flag=True, help='Run without first calling ct-mkproject')
 @click.version_option(version=__version__)
-def main(**kwargs):
+def main():
     '''
     Create Python virtual environment in `./venv` and install project in it.
     
-    By default first, calls `ct-mkproject` to ensure project files are up to date.
+    First calls `ct-mkproject` to ensure project files are up to date, unless
+    CT_NO_MKPROJECT is set. In the latter case requirements.txt,
+    *requirements.in files and setup.py should already be present.
     '''
     init_logging(debug=False)
     with graceful_main(logger):
-        _main(**kwargs)
+        _main()
     
-def _main(no_mkproject):
-    if not no_mkproject:
-        pb.local['ct-mkproject']()  # Ensure requirements.in files, ... are up to date
+def _main():
+    pb.local['ct-mkproject']()  # Ensure requirements.in files, ... are up to date
     
     project_root = Path.cwd()
     project = get_project(project_root)

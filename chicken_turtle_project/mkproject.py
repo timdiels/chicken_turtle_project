@@ -40,6 +40,7 @@ This module represents totally ordered sets (tosets) as `setlist`s. E.g. a toset
 from collections_extended import setlist
 from chicken_turtle_util.itertools import window 
 import networkx as nx
+import sys
     
 def toset_from_tosets(*tosets):
     '''
@@ -135,9 +136,17 @@ def _main(project_version):
     will be dirty after the commit (e.g. setup.py) due to implementation
     limitations, as these files are managed by ct-mkproject, there should be no
     need to `git reset --hard` them.
+    
+    Environment variables:
+    
+    - CT_NO_MKPROJECT: when set, ct-mkproject will exit immediately
+    
     '''
     init_logging()
     with graceful_main(logger):
+        if 'CT_NO_MKPROJECT' in pb.local.env:
+            sys.exit(0)
+        
         project_root = Path.cwd()
         repo = get_repo(project_root)
         

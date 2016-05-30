@@ -22,11 +22,19 @@ Changelist
 v2.3.0 (upcoming)
 -----------------
 
+- Added: 
+  
+  - when `CT_NO_MKPROJECT` environment variable is set, ct-mkproject will
+    exit immediately when called.
+
 - Changed: 
 
   - if `pip`, `wheel` or `setuptools` is mentioned in a requirements.in file,
     it will also appear in requirements.txt, for the rare cases where you need
     to constrain one of them.
+
+- Removed: ``ct-mkvenv --no-mkproject``, instead use
+  ``CT_NO_MKPROJECT=y ct-mkvenv``.
 
 v2.2.0
 ------

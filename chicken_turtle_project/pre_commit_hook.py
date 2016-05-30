@@ -58,7 +58,7 @@ def main():
                 # Restore venv dir
                 with pb.local.cwd(str(project_root)):
                     with suppress(pb.commands.ProcessExecutionError): # if restoring fails, commit should still continue
-                        pb.local['ct-mkvenv']('--no-mkproject')
+                        pb.local['ct-mkvenv']()
         finally:
             remove_file(temp_dir)
             
