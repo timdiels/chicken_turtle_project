@@ -357,15 +357,20 @@ def _update_requirements_txt(project_root):
     requirements_txt_path = project_root / 'requirements.txt'
     requirements_txt_lines = {get_dependency_name(line[0], line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
     all_dependencies = []
+    all_requirements_in_lines = {}
     for input_path in input_file_paths:
-        dependency_names = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(input_path) if line[1]]
-        dependency_names = [name for name in dependency_names if not is_sip_dependency(name)]
+        dependency_names = [(get_dependency_name(line[0], line[1]), line[-1]) for line in parse_requirements_file(input_path) if line[1]]
+        all_requirements_in_lines.update(dict(dependency_names))
+        dependency_names = [name for name, _ in dependency_names if not is_sip_dependency(name)]
         all_dependencies.append(setlist(dependency_names))
 
     all_dependencies = toset_from_tosets(*all_dependencies)
     with requirements_txt_path.open('w') as f:
         for name in all_dependencies:  # write ordered
-            f.write(requirements_txt_lines[name] + '\n')
+            if name == 'pip':
+                f.write(all_requirements_in_lines[name] + '\n')
+            else:
+                f.write(requirements_txt_lines[name] + '\n')
         for name, line in sorted(requirements_txt_lines.items()):  # write left-overs, sorted to avoid unnecessary diffs in git
             if name not in all_dependencies:
                 f.write(line + '\n')

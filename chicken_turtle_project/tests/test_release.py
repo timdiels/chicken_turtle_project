@@ -171,8 +171,6 @@ def test_editable_requirements(tmpcwd):
     project = project1.copy()
     add_complex_requirements_in(project)
     create_release_project(project)
-    git_('add', '.')
-    git_('commit', '-m', 'message')
     result = release('1.0.0')
     assert result.exit_code != 0
     assert 'No editable requirements (-e) allowed for release' in result.output

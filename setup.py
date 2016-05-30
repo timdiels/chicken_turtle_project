@@ -55,7 +55,8 @@ setup(
                             'plumbum',
                             'pypandoc',
                             'gitpython',
-                            'pip-tools',
+                            'pip-tools<1.7',
+                            'pip<8.1.2',
                             'checksumdir',
                             'versio',
                             'networkx'],
@@ -81,6 +82,23 @@ setup(
                         '\n'
                         'Changelist\n'
                         '==========\n'
+                        '\n'
+                        'v2.3.0 (upcoming)\n'
+                        '-----------------\n'
+                        '\n'
+                        '-  Added:\n'
+                        '\n'
+                        '   -  when CT\\_NO\\_MKPROJECT environment variable is set, ct-mkproject\n'
+                        '      will exit immediately when called.\n'
+                        '\n'
+                        '-  Changed:\n'
+                        '\n'
+                        '   -  if pip, wheel or setuptools is mentioned in a requirements.in\n'
+                        '      file, it will also appear in requirements.txt, for the rare cases\n'
+                        '      where you need to constrain one of them.\n'
+                        '\n'
+                        '-  Removed: ``ct-mkvenv --no-mkproject``, instead use\n'
+                        '   ``CT_NO_MKPROJECT=y ct-mkvenv``.\n'
                         '\n'
                         'v2.2.0\n'
                         '------\n'

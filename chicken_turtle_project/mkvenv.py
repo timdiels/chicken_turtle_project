@@ -63,10 +63,18 @@ def _main(no_mkproject):
     pip.bgrun(['install', '--upgrade'] + list(base_dependencies))
     
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
-    desired_dependencies = base_dependencies
+    desired_dependencies = set()
     for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
         if dependency:
             desired_dependencies.add(get_dependency_name(editable, dependency))
+            
+    # Upgrade install dependencies
+    base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
+    logger.info('Upgrading pip, setuptools, wheel')
+    to_upgrade = base_dependencies - desired_dependencies
+    to_install = base_dependencies - to_upgrade
+    pip('install', '--upgrade', *to_upgrade)
+    pip('install', *to_install)
     
     # Get installed dependencies
     installed_dependencies = set()
@@ -75,10 +83,11 @@ def _main(no_mkproject):
             installed_dependencies.add(get_dependency_name(editable, dependency))
             
     # Remove installed packages not listed in requirements.txt
-    extra_dependencies = installed_dependencies - desired_dependencies
+    extra_dependencies = installed_dependencies - desired_dependencies - base_dependencies
     extra_dependencies.discard('chicken-turtle-project')  # never uninstall chicken-turtle-project
     logger.debug('Installed packages: ' + ' '.join(installed_dependencies))
     logger.debug('Desired packages: ' + ' '.join(desired_dependencies))
+    logger.debug('Base packages: ' + ' '.join(base_dependencies))
     logger.debug('Packages too many: ' + ' '.join(extra_dependencies))
     if extra_dependencies:
         logger.info('Removing packages not listed as dependencies')

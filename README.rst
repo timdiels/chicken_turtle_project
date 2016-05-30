@@ -19,8 +19,17 @@ Links
 Changelist
 ==========
 
-v2.2.0
+v2.3.0 (upcoming)
 -----------------
+
+- Changed: 
+
+  - if `pip`, `wheel` or `setuptools` is mentioned in a requirements.in file,
+    it will also appear in requirements.txt, for the rare cases where you need
+    to constrain one of them.
+
+v2.2.0
+------
 
 - Changed: user friendlier error messages
 - Added:
