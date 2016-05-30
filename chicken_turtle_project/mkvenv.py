@@ -92,6 +92,7 @@ def _main():
     # Install desired dependencies
     logger.info('Installing dependencies')
     for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):  # Note: we can't use pip install -r as we promise to install in order
+        print(dependency) #TODO speedup
         if not dependency:
             continue
         if editable:

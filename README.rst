@@ -19,8 +19,8 @@ Links
 Changelist
 ==========
 
-v2.3.0 (upcoming)
------------------
+v2.3.0
+------
 
 - Fixed:
 

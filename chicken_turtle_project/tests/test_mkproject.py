@@ -598,9 +598,9 @@ def test_mkdoc(tmpcwd):
     assert description in content  # the docstring of the project
 
 '''
-TODO
+TODO 
 
-mkvenv: started one from scratch but: pip wasn't upgraded, nor was setuptools, wheels wasn't present. You should upgrade pip, setuptools and wheels each time.
+add simple test for CT_NO_MKPROJECT, call ct-mkproject and see it doesn't do anything, exits 0. e.g. call with empty dir
 
 use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
 http://doc.devpi.net/latest/quickstart-pypimirror.html
@@ -610,4 +610,6 @@ fix: after each commit, package is left uninstalled in the venv. Perhaps only wh
 When source file lacks copyright header or header is incorrect, error (and point to all wrong files)
 
 Keep setup.py from changing all the time: dict elems are written in pseudorandom order.
+
+Note: useful libraries: pkg_resources and https://github.com/pypa/packaging
 '''

@@ -377,7 +377,7 @@ def _update_requirements_txt(project_root):
     with requirements_txt_path.open('w') as f:
         for name in all_dependencies:  # write ordered
             if name == 'pip':
-                f.write(all_requirements_in_lines[name] + '\n')
+                f.write(all_requirements_in_lines[name] + '\n')  # XXX could derive the newest version that still fits the version spec using http://pkgtools.readthedocs.io/en/latest/pypi.html#pkgtools.pypi.PyPIXmlRpc.search or http://pkgtools.readthedocs.io/en/latest/pypi.html#pkgtools.pypi.PyPIXmlRpc.package_releases 
             else:
                 f.write(requirements_txt_lines[name] + '\n')
         for name, line in sorted(requirements_txt_lines.items()):  # write left-overs, sorted to avoid unnecessary diffs in git
