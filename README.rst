@@ -25,7 +25,7 @@ v2.2.0
 - Changed: user friendlier error messages
 - Added:
 
-  - `project.py::python_version`: allows specifying which Python version to use
+  - `project.py::python_version`\ : allows specifying which Python version to use
     for the venv and testing
   - ``ct-mkvenv --no-mkproject``: run without first calling `ct-mkproject`
   
@@ -39,8 +39,8 @@ v2.1.2
 - Changed: expect tests in ``your_pkg.tests`` instead of ``your_pkg.test``
 - Added:
 
-  - `project.py::package_name`: allows package name and PyPI/index name to be different 
-  - `project.py::pre_commit_no_ignore`: files not to ignore in precommit checks,
+  - `project.py::package_name`\ : allows package name and PyPI/index name to be different 
+  - `project.py::pre_commit_no_ignore`\ : files not to ignore in precommit checks,
     despite them not being tracked by git. 
 
 v2.0.4

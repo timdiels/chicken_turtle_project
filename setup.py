@@ -36,7 +36,6 @@ setup(
                        'Programming Language :: Python :: Implementation :: CPython',
                        'Programming Language :: Python :: Implementation :: Stackless'],
     'description': 'Python 3 project development tools',
-    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v2.2.0.tar.gz',
     'entry_points': {   'console_scripts': [   'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
                                                'ct-release = chicken_turtle_project.release:main',
@@ -89,7 +88,7 @@ setup(
                         '-  Changed: user friendlier error messages\n'
                         '-  Added:\n'
                         '\n'
-                        '   -  \\`project.py::python\\_version\\`: allows specifying which Python\n'
+                        '   -  project.py::python\\_version: allows specifying which Python\n'
                         '      version to use for the venv and testing\n'
                         '   -  ``ct-mkvenv --no-mkproject``: run without first calling\n'
                         '      ct-mkproject\n'
@@ -104,9 +103,9 @@ setup(
                         '   ``your_pkg.test``\n'
                         '-  Added:\n'
                         '\n'
-                        '   -  \\`project.py::package\\_name\\`: allows package name and PyPI/index\n'
-                        '      name to be different\n'
-                        '   -  \\`project.py::pre\\_commit\\_no\\_ignore\\`: files not to ignore in\n'
+                        '   -  project.py::package\\_name: allows package name and PyPI/index name\n'
+                        '      to be different\n'
+                        '   -  project.py::pre\\_commit\\_no\\_ignore: files not to ignore in\n'
                         '      precommit checks, despite them not being tracked by git.\n'
                         '\n'
                         'v2.0.4\n'
@@ -117,5 +116,5 @@ setup(
     'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '2.2.0'}
+    'version': '0.0.0'}
 )

@@ -1,10 +1,9 @@
-pytest-xdist==1.14
-coverage-pth==0.0.1
 sphinx-rtd-theme==0.1.9
 Sphinx==1.4               # via sphinx-rtd-theme
 numpydoc==0.6.0
+pytest-xdist==1.14
+coverage-pth==0.0.1
 pytest==2.9.1
-pytest-env==0.6.0
 chicken-turtle-util==1.0.0
 collections-extended==0.7.0
 more-itertools==2.2
@@ -15,8 +14,9 @@ GitPython==1.0.2
 pip-tools==1.6
 checksumdir==1.0.5
 versio==0.3.0
-pytest-cov==2.2.1
 networkx==1.11
+pytest-env==0.6.0
+pytest-cov==2.2.1
 pytest-mock==0.11.0
 alabaster==0.7.7          # via sphinx
 apipkg==1.4               # via execnet

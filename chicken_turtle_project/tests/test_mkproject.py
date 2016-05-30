@@ -600,6 +600,8 @@ def test_mkdoc(tmpcwd):
 '''
 TODO
 
+mkvenv: started one from scratch but: pip wasn't upgraded, nor was setuptools, wheels wasn't present. You should upgrade pip, setuptools and wheels each time.
+
 use https://pypi.python.org/pypi/pytest-devpi-server/ to speed up testing and allow better coverage of ct-release which can then release to a temp devpi. Be sure to scope it as wide as the whole test session perhaps (but don't want previous versions to get in the way. I guess it depends, for test_mkproject you want it module wide, for test_release you want it per test
 http://doc.devpi.net/latest/quickstart-pypimirror.html
 
