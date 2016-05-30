@@ -56,12 +56,7 @@ def _main():
         
     python = pb.local[str(venv_dir / 'bin/python')]
     pip = python[str(venv_dir / 'bin/pip')]  # Note: setuptools sometimes creates shebangs that are longer than the max allowed, so we call pip with python directly, avoiding the shebang
-    
-    # Install install dependencies    
-    base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
-    logger.info('Installing install dependencies')
-    pip.bgrun(['install', '--upgrade'] + list(base_dependencies))
-    
+        
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
     desired_dependencies = set()
     for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
@@ -90,8 +85,9 @@ def _main():
     logger.debug('Base packages: ' + ' '.join(base_dependencies))
     logger.debug('Packages too many: ' + ' '.join(extra_dependencies))
     if extra_dependencies:
-        logger.info('Removing packages not listed as dependencies')
-        pip.bgrun(['uninstall', '-y'] + list(extra_dependencies))
+        if extra_dependencies != {project['name']}:
+            logger.info('Removing packages not listed as dependencies: ' + ', '.join(extra_dependencies))
+        pip('uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
     logger.info('Installing dependencies')

@@ -22,6 +22,10 @@ Changelist
 v2.3.0 (upcoming)
 -----------------
 
+- Fixed:
+
+  - `ct-mkvenv` did not upgrade `pip`, `wheel` and `setuptools`
+
 - Added: 
   
   - when `CT_NO_MKPROJECT` environment variable is set, ct-mkproject will
