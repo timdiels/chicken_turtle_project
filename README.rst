@@ -19,12 +19,18 @@ Links
 Changelist
 ==========
 
-v2.2.0 (upcoming)
+v2.2.0
 -----------------
 
-- Changed: more user friendly errors
-- Added: `project.py::python_version`: allows specifying which Python version to use for the venv and testing
-- Fixed: the project's package was missing from venv after each commit.  
+- Changed: user friendlier error messages
+- Added:
+
+  - `project.py::python_version`: allows specifying which Python version to use
+    for the venv and testing
+  - ``ct-mkvenv --no-mkproject``: run without first calling `ct-mkproject`
+  
+- Fixed: the project's package was missing from venv after each commit. The
+  venv wasn't restored properly after a pre-commit.  
 
 
 v2.1.2
