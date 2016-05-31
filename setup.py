@@ -59,6 +59,7 @@ setup(
                             'pip<8.1.2',
                             'checksumdir',
                             'versio',
+                            'numpy',
                             'networkx'],
     'keywords': 'development release setuptools tools',
     'license': 'LGPL3',
