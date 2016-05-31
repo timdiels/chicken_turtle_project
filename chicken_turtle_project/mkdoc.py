@@ -1,5 +1,6 @@
 from chicken_turtle_project.common import (
-    graceful_main, init_logging, remove_file, get_project, get_pkg_root
+    graceful_main, remove_file, get_project, get_pkg_root,
+    debug_option
 )
 from chicken_turtle_project import __version__
 import click
@@ -10,15 +11,15 @@ import plumbum as pb
 logger = logging.getLogger(__name__)
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@debug_option()
 @click.version_option(version=__version__)
-def main():
+def main(debug):
     '''
     Generate project documentation
     
     Note: calls `ct-mkvenv` to ensure the venv is up to date
     '''
-    init_logging()
-    with graceful_main(logger):
+    with graceful_main(logger, app_name='mkdoc', debug=debug):
         pb.local['ct-mkvenv'] & pb.FG  # ensure venv is up to date
         
         venv_dir = Path(pb.local.env.get('CT_VENV_DIR', 'venv')).absolute()

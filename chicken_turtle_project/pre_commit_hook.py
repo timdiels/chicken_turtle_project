@@ -1,4 +1,4 @@
-from chicken_turtle_project.common import remove_file, init_logging, graceful_main, get_project
+from chicken_turtle_project.common import remove_file, graceful_main, get_project, debug_option
 from chicken_turtle_project import __version__
 from pathlib import Path
 import plumbum as pb
@@ -14,13 +14,13 @@ git_ = pb.local['git']
 tar = pb.local['tar']
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@debug_option()
 @click.version_option(version=__version__)
-def main():
+def main(debug):
     '''
     Internal, do not use
     '''
-    init_logging()
-    with graceful_main(logger):
+    with graceful_main(logger, app_name='pre-commit-hook', debug=debug):
         temp_dir = Path(mkdtemp())
         try:
             # Export last commit + staged changes

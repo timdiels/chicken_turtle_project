@@ -1,8 +1,8 @@
 from chicken_turtle_util.exceptions import UserException
 from chicken_turtle_project.common import (
-    get_project, graceful_main, get_repo, init_logging, 
+    get_project, graceful_main, get_repo, 
     parse_requirements_file, get_dependency_name, get_pkg_root, 
-    is_sip_dependency, get_dependency_file_paths
+    is_sip_dependency, get_dependency_file_paths, debug_option
 )
 from chicken_turtle_project import specification as spec
 from setuptools import find_packages  # Always prefer setuptools over distutils
@@ -84,8 +84,9 @@ def toset_from_tosets(*tosets):
     envvar='CT_PROJECT_VERSION',
     help='Internal option, do not use.'
 )
+@debug_option()
 @click.version_option(version=__version__)
-def _main(project_version):
+def _main(project_version, debug):
     '''
     Create, update and validate project, enforcing Chicken Turtle Project
     development methodology.
@@ -142,8 +143,7 @@ def _main(project_version):
     - CT_NO_MKPROJECT: when set, ct-mkproject will exit immediately
     
     '''
-    init_logging()
-    with graceful_main(logger):
+    with graceful_main(logger, app_name='mkproject', debug=debug):
         if 'CT_NO_MKPROJECT' in pb.local.env:
             sys.exit(0)
         

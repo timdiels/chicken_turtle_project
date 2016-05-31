@@ -99,6 +99,8 @@ setup(
                         '\n'
                         '   -  when CT\\_NO\\_MKPROJECT environment variable is set, ct-mkproject\n'
                         '      will exit immediately when called.\n'
+                        '   -  --debug option, default log output is now terser and more\n'
+                        '      readable.\n'
                         '\n'
                         '-  Changed:\n'
                         '\n'

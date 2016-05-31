@@ -1,7 +1,7 @@
 from chicken_turtle_project.common import (
-    graceful_main, init_logging, get_dependency_file_paths, 
+    graceful_main, get_dependency_file_paths, 
     parse_requirements_file, is_sip_dependency, get_dependency_name,
-    parse_requirements, sip_packages, remove_file, get_project
+    sip_packages, remove_file, get_project, debug_option
 )
 from chicken_turtle_project import __version__
 import click
@@ -26,8 +26,9 @@ def get_venv(venv_dir):
     return pkg_resources.WorkingSet([str(next(venv_dir.glob('lib/python*/site-packages')))])
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@debug_option()
 @click.version_option(version=__version__)
-def main():
+def main(debug):
     '''
     Create Python virtual environment in `./venv` and install project in it.
     
@@ -35,8 +36,7 @@ def main():
     CT_NO_MKPROJECT is set. In the latter case requirements.txt,
     *requirements.in files and setup.py should already be present.
     '''
-    init_logging(debug=False)
-    with graceful_main(logger):
+    with graceful_main(logger, app_name='mkvenv', debug=debug):
         _main()
     
 def _main():

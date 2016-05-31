@@ -27,6 +27,8 @@ import shutil
 import git
 import sys
 import re
+import click
+from functools import partial
 
 import logging
 logger = logging.getLogger(__name__)
@@ -120,15 +122,18 @@ def get_project(project_root):
         raise UserException('python_version must be a tuple of (major>0, minor>0), e.g. (3,5): {!r}'.format(pattern))
     return project
     
-def init_logging(debug=False):
+def _init_logging(app_name, debug):
     if debug:
         level = logging.DEBUG
+        format_ = '{levelname} {name}:{lineno}: {message}'
     else:
         level = logging.INFO
-    logging.basicConfig(level=level)
+        format_ = '{{levelname[0]}} {}: {{message}}'.format(app_name)
+    logging.basicConfig(level=level, style='{', format=format_)
     
 @contextmanager
-def graceful_main(logger):
+def graceful_main(logger, app_name, debug=False):
+    _init_logging(app_name, debug)
     signal(SIGPIPE, SIG_DFL)  # Ignore SIGPIPE, http://stackoverflow.com/a/30091579/1031434
     try:
         yield
@@ -243,3 +248,4 @@ def remove_file(path): #XXX moved to CTU, use it: path.remove()
     else:
         path.unlink()
         
+debug_option = partial(click.option, '--debug', is_flag=True, default=False, help='Enable debug-mode')

@@ -35,6 +35,8 @@ v2.3.0
   - when `CT_NO_MKPROJECT` environment variable is set, ct-mkproject will
     exit immediately when called.
 
+  - `--debug` option, default log output is now terser and more readable.
+
 - Changed: 
 
   - if `pip`, `wheel` or `setuptools` is mentioned in a requirements.in file,

@@ -16,7 +16,7 @@
 # along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
 
 from chicken_turtle_util.exceptions import UserException
-from chicken_turtle_project.common import graceful_main, get_repo, get_project, init_logging, parse_requirements_file
+from chicken_turtle_project.common import graceful_main, get_repo, get_project, parse_requirements_file, debug_option
 from chicken_turtle_project import __version__
 from chicken_turtle_util import cli
 from functools import partial
@@ -39,8 +39,9 @@ Version.__name__ = 'Version'
     'project-version',
     type=Version
 )
+@debug_option()
 @click.version_option(version=__version__)
-def main(project_version):
+def main(project_version, debug):
     '''
     Release the project to your configured test (optional) and production index.
     
@@ -55,8 +56,7 @@ def main(project_version):
     "1.0.0-dev2". Versions must adhere to PEP-0440 and preferably make use of
     semantic versioning.
     '''
-    init_logging()
-    with graceful_main(logger):       
+    with graceful_main(logger, app_name='release', debug=debug):       
         # Note: The pre-commit hook already does most of the project validation
         repo = get_repo(Path.cwd())
         

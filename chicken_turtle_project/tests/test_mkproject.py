@@ -480,7 +480,7 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         mkproject & pb.FG  # install pre-commit hook
         remove_file(Path('README.md'))
         git_('add', '.')
-        with assert_process_fails(stderr_matches='(?i)error'):
+        with assert_process_fails(stderr_matches='Missing file: README.md'):
             git_('commit', '-m', 'message')  # runs the hook
         
     def test_ignore_unstaged(self, tmpcwd):
