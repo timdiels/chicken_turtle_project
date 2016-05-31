@@ -9,6 +9,7 @@ from pathlib import Path
 from collections import namedtuple
 import logging
 import plumbum as pb
+import pkg_resources
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,9 @@ class SIPDependency(_SIPDependency):
             return self.name == other.name
         else:
             return self.name == str(other).lower()
+    
+def get_venv(venv_dir):
+    return pkg_resources.WorkingSet([str(next(venv_dir.glob('lib/python*/site-packages')))])
     
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.version_option(version=__version__)
@@ -57,52 +61,57 @@ def _main():
     python = pb.local[str(venv_dir / 'bin/python')]
     pip = python[str(venv_dir / 'bin/pip')]  # Note: setuptools sometimes creates shebangs that are longer than the max allowed, so we call pip with python directly, avoiding the shebang
         
+    # These are always (implicitly) desired
+    base_dependencies = {'pip' : '', 'setuptools' : '', 'wheel' : ''}
+    for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
+        if dependency in base_dependencies:
+            base_dependencies[dependency] = version_spec
+    
+    logger.info('Upgrading {}'.format(', '.join(sorted(base_dependencies))))
+    pip('install', '--upgrade', *(dependency + version_spec for dependency, version_spec in base_dependencies.items()))
+    
     # Get desired dependencies from requirements.txt (note: requirements.txt contains no SIP deps)
-    desired_dependencies = set()
+    desired_dependencies = set(base_dependencies.keys())
     for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):
         if dependency:
             desired_dependencies.add(get_dependency_name(editable, dependency))
-            
-    # Upgrade install dependencies
-    base_dependencies = {'pip', 'setuptools', 'wheel'}  # these are always (implicitly) desired
-    logger.info('Upgrading pip, setuptools, wheel')
-    to_upgrade = base_dependencies - desired_dependencies
-    to_install = base_dependencies - to_upgrade
-    pip('install', '--upgrade', *to_upgrade)
-    pip('install', *to_install)
     
     # Get installed dependencies
-    installed_dependencies = set()
-    for editable, dependency, version_spec, _ in parse_requirements(pip('freeze').splitlines()):
-        if dependency:
-            installed_dependencies.add(get_dependency_name(editable, dependency))
+    venv = get_venv(venv_dir)
+    installed_dependencies = {distribution.project_name.lower() for distribution in venv}
             
     # Remove installed packages not listed in requirements.txt
-    extra_dependencies = installed_dependencies - desired_dependencies - base_dependencies
+    extra_dependencies = installed_dependencies - desired_dependencies
     extra_dependencies.discard('chicken-turtle-project')  # never uninstall chicken-turtle-project
     logger.debug('Installed packages: ' + ' '.join(installed_dependencies))
     logger.debug('Desired packages: ' + ' '.join(desired_dependencies))
-    logger.debug('Base packages: ' + ' '.join(base_dependencies))
-    logger.debug('Packages too many: ' + ' '.join(extra_dependencies))
     if extra_dependencies:
         if extra_dependencies != {project['name']}:
             logger.info('Removing packages not listed as dependencies: ' + ', '.join(extra_dependencies))
         pip('uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
-    logger.info('Installing dependencies')
     for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):  # Note: we can't use pip install -r as we promise to install in order
-        print(dependency) #TODO speedup
         if not dependency:
             continue
-        if editable:
-            args = ['-e']
-        else:
-            args = []
+        
+        # Skip base deps as they've already been installed above
+        if dependency in base_dependencies:
+            continue
+        
+        #
+        args = ['-e'] if editable else []
+        requirement = get_dependency_name(editable, dependency)
         if version_spec:
             dependency += version_spec
+            requirement += version_spec
         args.append(dependency)
-        pip('install', *args)
+        venv = get_venv(venv_dir)
+        try:
+            venv.require(requirement)
+        except pkg_resources.ResolutionError:
+            logger.info('Installing ' + dependency)
+            pip('install', *args)
     
     # Get desired SIP dependencies
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}

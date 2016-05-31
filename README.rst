@@ -26,6 +26,10 @@ v2.3.0
 
   - `ct-mkvenv` did not upgrade `pip`, `wheel` and `setuptools`
 
+- Optimised:
+
+  - `ct-mkvenv` reruns are faster
+
 - Added: 
   
   - when `CT_NO_MKPROJECT` environment variable is set, ct-mkproject will
