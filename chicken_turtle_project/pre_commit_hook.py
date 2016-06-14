@@ -53,7 +53,7 @@ def main(debug):
                         del pb.local.env[name]
     
                     # Run tests
-                    pb.local[str(venv_dir / 'bin/py.test')] & pb.FG(retcode=(0,5))
+                    pb.local['sh']['-c', '. {} && py.test'.format(venv_dir / 'bin/activate')] & pb.FG(retcode=(0,5))
             finally:
                 # Restore venv dir
                 with pb.local.cwd(str(project_root)):

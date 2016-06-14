@@ -90,6 +90,7 @@ setup(
                         '-  Fixed:\n'
                         '\n'
                         '   -  ct-mkvenv did not upgrade pip, wheel and setuptools\n'
+                        '   -  pre-commit did not enter venv properly when running tests\n'
                         '\n'
                         '-  Optimised:\n'
                         '\n'

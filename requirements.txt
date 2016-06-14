@@ -1,5 +1,3 @@
-sphinx-rtd-theme==0.1.9
-Sphinx==1.4.2             # via sphinx-rtd-theme
 chicken-turtle-util==1.0.0
 collections-extended==0.7.0
 more-itertools==2.2
@@ -14,12 +12,14 @@ Versio==0.3.0
 pytest-xdist==1.14
 coverage-pth==0.0.1
 pytest==2.9.1
+pytest-env==0.6.0
 numpy==1.11.0
 networkx==1.11
-pytest-env==0.6.0
+sphinx-rtd-theme==0.1.9
+Sphinx==1.4.2             # via sphinx-rtd-theme
+numpydoc==0.6.0
 pytest-cov==2.2.1
 pytest-mock==1.0
-numpydoc==0.6.0
 alabaster==0.7.8          # via sphinx
 apipkg==1.4               # via execnet
 babel==2.3.4              # via sphinx

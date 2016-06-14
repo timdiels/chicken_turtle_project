@@ -25,6 +25,7 @@ v2.3.0
 - Fixed:
 
   - `ct-mkvenv` did not upgrade `pip`, `wheel` and `setuptools`
+  - pre-commit did not enter venv properly when running tests
 
 - Optimised:
 
