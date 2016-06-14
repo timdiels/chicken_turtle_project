@@ -1,3 +1,20 @@
+# Copyright (C) 2016 Tim Diels <timdiels.m@gmail.com>
+# 
+# This file is part of Chicken Turtle Project.
+# 
+# Chicken Turtle is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Chicken Turtle is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with Chicken Turtle.  If not, see <http://www.gnu.org/licenses/>.
+
 '''
 ct-mkproject tests
 '''
@@ -599,6 +616,8 @@ def test_mkdoc(tmpcwd):
 
 '''
 TODO 
+
+A single author and author_email doesn't always work. Often times people work in teams on it, so there's multiple authors and no single author or author_email.
 
 add simple test for CT_NO_MKPROJECT, call ct-mkproject and see it doesn't do anything, exits 0. e.g. call with empty dir
 
