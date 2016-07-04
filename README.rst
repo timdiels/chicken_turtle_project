@@ -22,6 +22,8 @@ Changelist
 v2.3.0
 ------
 
+Now then, the changelist:
+
 - Fixed:
 
   - `ct-mkvenv` did not upgrade `pip`, `wheel` and `setuptools`
@@ -39,6 +41,8 @@ v2.3.0
   - `--debug` option, default log output is now terser and more readable.
 
 - Changed: 
+
+  - Generate API using autosummary_generate instead of sphinx-apidoc. 
 
   - if `pip`, `wheel` or `setuptools` is mentioned in a requirements.in file,
     it will also appear in requirements.txt, for the rare cases where you need

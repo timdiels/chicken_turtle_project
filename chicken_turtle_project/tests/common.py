@@ -155,6 +155,7 @@ _project_files = {
         mittens_says = meow
         '''),
     Path('setup.py'): '# mittens setup.py',
+    Path('docs/_templates/autosummary/module.rst'): '..\n    nothing much',
     Path('docs/index.rst'): '.. mittens index.rst',
     Path('docs/conf.py'): '# mittens conf.py',
     Path('docs/Makefile'): dedent('''\

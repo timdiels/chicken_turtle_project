@@ -244,6 +244,7 @@ def _main(project_version, debug):
         _ensure_exists(doc_root / 'conf.py', spec.docs_conf_py, format_kwargs)
         _ensure_exists(doc_root / 'Makefile', spec.docs_makefile, raw=True)
         _ensure_exists(doc_root / 'index.rst', spec.docs_index_rst, format_kwargs)
+        _ensure_exists(doc_root / '_templates/autosummary/module.rst', spec.docs_templates_autosummary_module_rst, raw=True)
             
 def _ensure_project_exists(project_root):
     project_path = project_root / 'project.py'

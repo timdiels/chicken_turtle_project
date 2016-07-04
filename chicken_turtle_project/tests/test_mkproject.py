@@ -174,6 +174,7 @@ project_file_requirements = {
     Path('operation/mittens/__init__.py') : _SnippetsRequirement(Permission.update, {spec.version_line}),
     Path('operation/mittens/tests/__init__.py') : _NoRequirement(Permission.create),
     Path('operation/mittens/tests/conftest.py') : _SnippetsRequirement(Permission.update, {spec.conftest_py}),
+    Path('docs/_templates/autosummary/module.rst') : _SnippetsRequirement(Permission.create, {spec.docs_templates_autosummary_module_rst}, format_snippets=False),
     Path('docs/conf.py') : _SnippetsRequirement(Permission.create, {spec.docs_conf_py}),
     Path('docs/Makefile') : _SnippetsRequirement(Permission.create, {spec.docs_makefile}, format_snippets=False),
     Path('docs/index.rst') : _SnippetsRequirement(Permission.create, {spec.docs_index_rst}),
@@ -563,16 +564,17 @@ class TestPrecommit(object): #XXX mv to separate file, it tests the pre-commit h
         git_('reset', 'operation/mittens/test/mah_dir')
         git_('commit', '-m', 'message') # run pre-commit
             
-    def test_invalid_documentation(self, tmpcwd):
-        '''When a docstring contains an error, mkdoc exits non-zero and pre-commit aborts'''
-        project = project1.copy()
-        add_docstring(project, '.. derpistan:: nope')
-        create_project(project)
-        mkproject()
-        git_('add', '.')
-        
-        with assert_process_fails(stderr_matches='derpistan'):
-            git_('commit', '-m', 'message')  # runs the hook
+    #TODO test broken since switch to autosummary_generate (user now manually builds API reference page, so docstring errors no longer automatically trigger trouble)
+#     def test_invalid_documentation(self, tmpcwd):
+#         '''When a docstring contains an error, mkdoc exits non-zero and pre-commit aborts'''
+#         project = project1.copy()
+#         add_docstring(project, '.. derpistan:: nope')
+#         create_project(project)
+#         mkproject()
+#         git_('add', '.')
+#         
+#         with assert_process_fails(stderr_matches='derpistan'):
+#             git_('commit', '-m', 'message')  # runs the hook
         
 def test_idempotent(tmpcwd):
     '''
@@ -609,10 +611,8 @@ def test_mkdoc(tmpcwd):
     content = read_file('docs/build/html/index.html')
     assert '0.0.0' in content  # correct version
     assert project.project_py['human_friendly_name'] in content  # human friendly project name
-    assert 'operation package' in content
     
-    content = read_file('docs/build/html/api/operation.mittens.html')
-    assert description in content  # the docstring of the project
+    # Note: test does not cover autosummary_generate and its templates
 
 '''
 TODO 

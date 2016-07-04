@@ -147,7 +147,6 @@ last_test_runs
 dist
 build
 docs/build
-docs/api
 '''
 gitignore_patterns = {line for line in map(str.strip, gitignore_patterns.splitlines()) if line}
 
@@ -207,6 +206,9 @@ include {readme_file}
 recursive-include docs *
 recursive-exclude docs/build *
 '''.splitlines()
+
+#: docs/_templates/autosummary/module.rst must match this format
+docs_templates_autosummary_module_rst = resource_string(__name__, 'data/_templates/autosummary/module.rst').decode('utf-8')
 
 #: docs/conf.py must match this format
 docs_conf_py = resource_string(__name__, 'data/conf.py').decode('utf-8')

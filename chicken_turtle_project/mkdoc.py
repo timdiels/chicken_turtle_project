@@ -45,7 +45,6 @@ def main(debug):
         pkg_root = get_pkg_root(project_root, project['package_name'])
         
         doc_root = project_root / 'docs'
-        remove_file(doc_root / 'api')
         remove_file(doc_root / 'build')
         kwargs = dict(
             venv_activate=venv_dir / 'bin/activate',
@@ -53,4 +52,4 @@ def main(debug):
             pkg_root=pkg_root,
             pkg_root_root= project_root / project['package_name'].split('.')[0]
         )
-        pb.local['sh']['-c', '. {venv_activate} && sphinx-apidoc -o {doc_root}/api -T {pkg_root_root} {pkg_root}/tests && cd {doc_root} && make html'.format(**kwargs)] & pb.FG
+        pb.local['sh']['-c', '. {venv_activate} && cd {doc_root} && make html'.format(**kwargs)] & pb.FG

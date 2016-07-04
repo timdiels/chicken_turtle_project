@@ -87,6 +87,8 @@ setup(
                         'v2.3.0\n'
                         '------\n'
                         '\n'
+                        'Now then, the changelist:\n'
+                        '\n'
                         '-  Fixed:\n'
                         '\n'
                         '   -  ct-mkvenv did not upgrade pip, wheel and setuptools\n'
@@ -105,6 +107,7 @@ setup(
                         '\n'
                         '-  Changed:\n'
                         '\n'
+                        '   -  Generate API using autosummary\\_generate instead of sphinx-apidoc.\n'
                         '   -  if pip, wheel or setuptools is mentioned in a requirements.in\n'
                         '      file, it will also appear in requirements.txt, for the rare cases\n'
                         '      where you need to constrain one of them.\n'
@@ -143,7 +146,10 @@ setup(
                         '\n'
                         'No changelist\n',
     'name': 'chicken_turtle_project',
-    'package_data': {'chicken_turtle_project': ['data/Makefile', 'data/conf.py', 'data/index.rst']},
+    'package_data': {   'chicken_turtle_project': [   'data/Makefile',
+                                                      'data/_templates/autosummary/module.rst',
+                                                      'data/conf.py',
+                                                      'data/index.rst']},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
     'version': '0.0.0'}
