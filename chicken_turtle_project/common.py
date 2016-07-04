@@ -150,18 +150,20 @@ def graceful_main(logger, app_name, debug=False):
 def get_repo(project_root):
     return git.Repo(pb.local.env.get('GIT_DIR', str(project_root)))
 
+#TODO test whole CTP with a line like -e ../chicken_turtle_util[asyncio,configuration,inspect]
 def parse_requirements(lines):
     for line in lines:
         match = re.fullmatch(r'(-e\s)?\s*([^#\s][^\s]*)?\s*(#.*)?', line.strip())
         result = [bool(match.group(1)), None, None, match.group(0)]
         dependency = match.group(2)
         if dependency:
-            parts = re.split('(==|<|>)', dependency)
-            if len(parts) > 1:
-                result[1] = ''.join(parts[:-2])
-                result[2] = ''.join(parts[-2:])
-            else:
-                result[1] = dependency 
+            result[1] = dependency 
+            for pattern in (r'(\[)', r'(==|<|>)'):
+                parts = re.split(pattern, dependency)
+                if len(parts) > 1:
+                    result[1] = ''.join(parts[:-2])
+                    result[2] = ''.join(parts[-2:])
+                    break
         yield tuple(result)
     
 # XXX requirements.txt files are very complex https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format
