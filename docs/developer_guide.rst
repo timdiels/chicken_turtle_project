@@ -47,3 +47,10 @@ onto that particular commit. But this is too restrictive; you would no longer
 be able to amend or rebase commits in editable requirements as you need to push
 it as soon as you use it in another repo you are working on. 
 
+No effort is made to handle packages which fail to mention all of their
+dependencies, instead those packages should be fixed upstream. Should such a
+situation occur and the package maintainer refuses to fix it, a work around
+could be made: a list of packages, ct-mkvenv would install these in list-order
+with the version specs specified in requirements.txt, then ct-mkvenv would do
+another pip install -r requirements.txt for the other packages (without needing
+to exclude the misbehaving packages from requirements.txt).
