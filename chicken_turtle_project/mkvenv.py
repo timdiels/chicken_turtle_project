@@ -108,27 +108,8 @@ def _main():
         pip('uninstall', '-y', *extra_dependencies)
     
     # Install desired dependencies
-    for editable, dependency, version_spec, _ in parse_requirements_file(Path('requirements.txt')):  # Note: we can't use pip install -r as we promise to install in order
-        if not dependency:
-            continue
-        
-        # Skip base deps as they've already been installed above
-        if dependency in base_dependencies:
-            continue
-        
-        #
-        args = ['-e'] if editable else []
-        requirement = get_dependency_name(editable, dependency)
-        if version_spec:
-            dependency += version_spec
-            requirement += version_spec
-        args.append(dependency)
-        venv = get_venv(venv_dir)
-        try:
-            venv.require(requirement)
-        except pkg_resources.ResolutionError:
-            logger.info('Installing ' + dependency)
-            pip('install', *args)
+    logger.info('Installing requirements.txt')
+    pip('install', '-r', 'requirements.txt')
     
     # Get desired SIP dependencies
     desired_sip_dependencies = {}  # {(name :: str) : (version :: str)}
