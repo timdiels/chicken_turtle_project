@@ -59,8 +59,7 @@ setup(
                             'pip<8.1.2',
                             'checksumdir',
                             'versio',
-                            'numpy',
-                            'networkx'],
+                            'numpy'],
     'keywords': 'development release setuptools tools',
     'license': 'LGPL3',
     'long_description': 'Python 3 project development tools. Looks like a turtle, tastes like\n'

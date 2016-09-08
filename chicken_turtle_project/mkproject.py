@@ -37,6 +37,8 @@ import os
 import re
 from glob import glob
 from tempfile import mkstemp
+from collections_extended import setlist
+import sys
 
 import logging
 logger = logging.getLogger(__name__)
@@ -47,52 +49,6 @@ _dummy_version = '0.0.0'
 
 def main(args=None):
     _main(args, help_option_names=['-h', '--help'])
-
-#TODO mv to CTU.ordering
-'''
-This module represents totally ordered sets (tosets) as `setlist`s. E.g. a toset
-`a < b < c` is represented as `setlist([a, b, c])`.
-'''
-
-from collections_extended import setlist
-from chicken_turtle_util.itertools import window 
-import networkx as nx
-import sys
-    
-def toset_from_tosets(*tosets):
-    '''
-    Create totally ordered set (toset) from tosets.
-    
-    These tosets, when merged, form a partially ordered set. The linear
-    extension of this poset, a toset, is returned.
-    
-    Parameters
-    ----------
-    tosets : iterable of setlist
-        tosets to merge
-        
-    Raises
-    ------
-    ValueError
-        if the tosets (derived from the lists) contradict each other. E.g. `[a, b]` and `[b, c, a]` contradict each other.
-        
-    Returns
-    -------
-    setlist
-        Totally ordered set
-    '''
-    # Construct directed graph with: a <-- b iff a < b and adjacent in a list
-    graph = nx.DiGraph()
-    for toset in tosets:
-        graph.add_nodes_from(toset)
-        graph.add_edges_from(window(reversed(toset)))
-    
-    # No cycles allowed
-    if not nx.is_directed_acyclic_graph(graph):
-        raise ValueError('Given tosets contradict each other')  # each cycle is a contradiction, e.g. a > b > c > a
-    
-    # Topological sort
-    return setlist(nx.topological_sort(graph, reverse=True))    
 
 @click.command()
 @cli.option(
@@ -376,32 +332,11 @@ def _update_requirements_txt(project_root):
                         raise UserException("{!r} must be pinned (i.e. must have a '==version' suffix) as it's a sip dependency".format(dependency))
 
         # Compile requirements
-        pb.local['pip-compile'](str(regular_dependencies_path), '-o', 'requirements.txt')  # Note: this eats up most of the time
+        # Note: pip-compile outputs a sorted list (though by a special key, e.g. currently -e first)
+        pb.local['pip-compile'](str(regular_dependencies_path), '--no-header', '--no-annotate', '-o', 'requirements.txt')  # Note: this eats up most of the time
     finally:
         regular_dependencies_path.unlink()
     
-    # Reorder to match ordering in requirements.in
-    requirements_txt_path = project_root / 'requirements.txt'
-    requirements_txt_lines = {get_dependency_name(line[0], line[1]) : line[-1] for line in parse_requirements_file(requirements_txt_path) if line[1]}
-    all_dependencies = []
-    all_requirements_in_lines = {}
-    for input_path in input_file_paths:
-        dependency_names = [(get_dependency_name(line[0], line[1]), line[-1]) for line in parse_requirements_file(input_path) if line[1]]
-        all_requirements_in_lines.update(dict(dependency_names))
-        dependency_names = [name for name, _ in dependency_names if not is_sip_dependency(name)]
-        all_dependencies.append(setlist(dependency_names))
-
-    all_dependencies = toset_from_tosets(*all_dependencies)
-    with requirements_txt_path.open('w') as f:
-        for name in all_dependencies:  # write ordered
-            if name == 'pip':
-                f.write(all_requirements_in_lines[name] + '\n')  # XXX could derive the newest version that still fits the version spec using http://pkgtools.readthedocs.io/en/latest/pypi.html#pkgtools.pypi.PyPIXmlRpc.search or http://pkgtools.readthedocs.io/en/latest/pypi.html#pkgtools.pypi.PyPIXmlRpc.package_releases 
-            else:
-                f.write(requirements_txt_lines[name] + '\n')
-        for name, line in sorted(requirements_txt_lines.items()):  # write left-overs, sorted to avoid unnecessary diffs in git
-            if name not in all_dependencies:
-                f.write(line + '\n')
-
     # Stage it
     git_('add', 'requirements.txt')
 

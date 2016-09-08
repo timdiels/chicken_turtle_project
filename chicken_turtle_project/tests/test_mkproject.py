@@ -418,11 +418,15 @@ class TestSetupPyAndRequirementsTxt(object):
         for name in {'pytest', 'pytest-testmon', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'} | set(spec.test_requirements_in) | set(spec.dev_requirements_in):
             assert name in requirements_txt_content
              
-        # Ordering of *requirements.in files must be maintained per file (file order may be ignored)
+        # Requirements.txt must be sorted like pip-compile
+        #TODO hard to test, exact order used is: https://github.com/nvie/pip-tools/blob/master/piptools/writer.py#L27
+        # maybe 2 local setup.py and 2 trivial pypi packages that have no dependencies and won't have any in the near/distant future 
         deps_txt = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(Path('requirements.txt')) if line[1]]
+        
+        # and must contain the dependencies of all *requirements.in files
         for path in map(Path, ('requirements.in', 'my_extra_requirements.in', 'test_requirements.in')):
             deps_in = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(path) if line[1]]
-            assert is_subsequence(deps_in, deps_txt)
+            assert set(deps_in).issubset(set(deps_txt))
             
     def test_sip_dependency(self, tmpcwd):
         '''

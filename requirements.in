@@ -12,4 +12,3 @@ pip<8.1.2
 checksumdir
 Versio
 numpy
-networkx
