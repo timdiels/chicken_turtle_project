@@ -366,6 +366,19 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     logger.info('Writing setup.py')
     setup_py_path = project_root / 'setup.py'
     with setup_py_path.open('w') as f:
+        # Note: deep sort setup() args such that the same setup.py is generated
+        # for equivalent setup() calls. This avoids unnecessary merge conflicts.
+        # pformat already prints dicts items ordered by their key, need only
+        # sort lists
+        for attr in ('classifiers', 'packages', 'install_requires'):
+            if attr in project:
+                project[attr].sort()
+        for attr in ('entry_points', 'extras_require', 'package_data'):
+            if attr in project:
+                dict_ = project[attr]
+                for key in dict_:
+                    dict_[key].sort()
+        
         f.write(setup_py_template.format(pprint.pformat(project, indent=4, width=120)))
     git_('add', setup_py_path)
   

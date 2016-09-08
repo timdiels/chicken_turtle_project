@@ -428,6 +428,15 @@ class TestSetupPyAndRequirementsTxt(object):
             deps_in = [get_dependency_name(line[0], line[1]) for line in parse_requirements_file(path) if line[1]]
             assert set(deps_in).issubset(set(deps_txt))
             
+        # Multiple runs yield the same setup.py each time
+        with open('setup.py') as f:
+            expected = f.read()
+        for _ in range(5):
+            mkproject()
+            with open('setup.py') as f:
+                actual = f.read()
+            assert actual == expected
+            
     def test_sip_dependency(self, tmpcwd):
         '''
         When sip based dependency, do not put it in setup.py or requirements.txt
