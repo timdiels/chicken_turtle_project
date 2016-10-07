@@ -109,12 +109,11 @@ def _main(project_version, debug):
     Any file modified by ct-mkproject, is automatically staged (git). Some files
     will be dirty after the commit (e.g. setup.py) due to implementation
     limitations, as these files are managed by ct-mkproject, there should be no
-    need to `git reset --hard` them.
+    need to ``git reset --hard`` them.
     
     Environment variables:
     
     - CT_NO_MKPROJECT: when set, ct-mkproject will exit immediately
-    
     '''
     with graceful_main(logger, app_name='mkproject', debug=debug):
         if 'CT_NO_MKPROJECT' in pb.local.env:

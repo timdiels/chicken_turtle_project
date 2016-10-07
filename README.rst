@@ -5,7 +5,7 @@ It makes it easier to make quality commits and releases, through automating
 what can be automated and by verifying manual work against quality requirements. 
 
 Chicken Turtle Project is alpha. The interface may change in the future, but
-has gained some stability (far less changes than pre v2.1.0).
+has gained some stability.
 
 
 Links
@@ -22,34 +22,43 @@ Changelist
 v2.3.0
 ------
 
-Now then, the changelist:
-
 - Fixed:
 
   - `ct-mkvenv` did not upgrade `pip`, `wheel` and `setuptools`
-  - pre-commit did not enter venv properly when running tests
+  - git pre-commit hook did not enter venv properly when running tests
+  - added missing `numpy` requirement, an optional dependency of `networkx`
+  - `requirements.in`: dependencies on extra requires (e.g.
+    ``dependency[extra]``) failed
 
 - Optimised:
 
   - `ct-mkvenv` reruns are faster
 
-- Added: 
+- Added or enhanced: 
   
-  - when `CT_NO_MKPROJECT` environment variable is set, ct-mkproject will
+  - when `CT_NO_MKPROJECT` environment variable is set, `ct-mkproject` will
     exit immediately when called.
 
-  - `--debug` option, default log output is now terser and more readable.
+  - `--debug` option: more detailed messages on stdout. 
+
+  - minimise changes in `setup.py` and `requirements.txt` (by sorting any lists)
 
 - Changed: 
 
-  - Generate API using autosummary_generate instead of sphinx-apidoc. 
+  - Terser and more readable messages on stdout
 
-  - if `pip`, `wheel` or `setuptools` is mentioned in a requirements.in file,
-    it will also appear in requirements.txt, for the rare cases where you need
+  - Generate API using `autosummary_generate` instead of `sphinx-apidoc`. 
+
+  - if `pip`, `wheel` or `setuptools` is mentioned in a `requirements.in` file,
+    it will also appear in `requirements.txt`, for the rare cases where you need
     to constrain one of them.
 
-- Removed: ``ct-mkvenv --no-mkproject``, instead use
-  ``CT_NO_MKPROJECT=y ct-mkvenv``.
+  - ct-mkvenv: dependencies no longer installed in the order they are specified
+    in requirements.txt
+
+- Removed: 
+  
+  - ``ct-mkvenv --no-mkproject``: instead, use ``CT_NO_MKPROJECT=y ct-mkvenv``.
 
 v2.2.0
 ------

@@ -4,13 +4,13 @@ User documentation
 Getting started
 ---------------
 
-For a new project, run ``ct-project``. You'll be asked to name your project and the
+For a new project, run ``ct-mkproject``. You'll be prompted for information and the
 project structure will be generated. For details on which files are created and/or
-managed by `ct-project`, see ``ct-project --help``.
+managed by `ct-mkproject`, see ``ct-mkproject --help``.
 
-`ct-project` can also be used on an existing project. The details on which
-files are created and/or managed by `ct-project` should allow you to
-restructure your project to match the structure expected by `ct-project`. 
+`ct-mkproject` can also be used on an existing project, though you may want to
+restructure your project structure according to the one expected by
+`ct-mkproject` (see ``ct-mkproject --help``)
 
 
 Project info
@@ -25,20 +25,22 @@ includes documentation of the options.
 Project invariants
 ------------------
 
-Having run `ct-project` once, you will never have to call it again. It will
+Having run `ct-mkproject` once, you will never have to call it again. It will
 have installed a git pre-commit hook that ensures the project state is up to
 date and valid at each commit.
 
 This ensures that for all of your (future) commits:
 
-- there are no errors in the documentation (i.e. sphinx-build encounters no errors or warnings)
-- there is a LICENSE.txt, a README file, ...
+- there are no errors in the documentation (i.e. sphinx-build encounters no
+  errors or warnings)
+- there is a `LICENSE.txt`, a README file, ...
 - the version is up to date across the project
 
-Further, it is guaranteed that any release commit can be checked out and having run ct-mkvenv,
-all tests will succeed. This also holds for non-release commits with no editable requirements.
-(editable requirements cannot be pinned in requirements.txt, so when you later revisit such a
-commit, the editable requirement may have changed (e.g. an amended commit)).
+Further, it is guaranteed that any release commit can be checked out and having
+run `ct-mkvenv`, all tests will succeed. This also holds for non-release commits
+with no editable requirements.  (editable requirements cannot be pinned in
+`requirements.txt`, so when you later revisit such a commit, the editable
+requirement may have changed (e.g. an amended commit)).
 
 
 Managing dependencies
@@ -52,13 +54,6 @@ optional dependencies. Required dependencies will appear in `setup.py`\ 's
 `install_requires`. Optional dependencies will appear in `extras_require` with
 ``$name`` as key, e.g. `test_requirements.in` corresponds to
 ``extras_require['test']``.
-
-In the rare case where one of your dependencies fails to list its dependencies
-correctly, you can add its dependencies to `requirements.in` before the 
-misbehaving dependency. When `X` appears before `Y` in `requirements.in` it will
-be installed before `Y` (unless `Y` is a dependency of `X`). E.g. ``pip
-install scikit-learn`` fails when `scipy` is not installed, if you list `scipy`
-before `scikit-learn`, CTP ensures `scipy` is installed before `scikit-learn`.
 
 
 Package data
@@ -86,10 +81,9 @@ Documenting
 -----------
 
 Sphinx is used to generate documentation. `ct-mkproject` generates a `docs`
-directory containing the source of the documentation of the project. Calling
-`ct-mkdoc` first generates API doc of your code into `docs/api`. `index.rst`
-includes this API doc by default. `ct-mkdoc` then compiles the documentation
-to html, which can be viewed at `docs/build/html`.
+directory containing the source of the documentation of the project.  Running
+``ct-mkdoc`` compiles the documentation to html, which can be viewed at
+`docs/build/html`.
 
 
 Releasing to Python indices
@@ -98,15 +92,16 @@ Releasing to Python indices
 To release your project to a Python index (e.g. PyPI, devpi), use `ct-release`.
 This ensures releases are made correctly. Simply call ``ct-release
 VERSION`` with the version you want to release.
-`ct-release` will first validate the project before trying to release it.
-Then it sets the version in the relevant files, adds a commit, tags it with the
-version, releases the project to a test index and finally it releases to the
-production index and pushes all commits in the working directory.
+`ct-release` will first validate the project and build the documentation before
+trying to release it.  Then it sets the version in the relevant files, adds a
+commit, tags it with the version, releases the project to a test index and
+finally it releases to the production index and pushes all commits in the
+working directory.
 
 Versions should adhere to `PEP-0440 <https://www.python.org/dev/peps/pep-0440/>`_
 and use `semantic versioning <https://python-packaging-user-guide.readthedocs.org/en/latest/distributing/#semantic-versioning-preferred>`_.
 Versions are only set on release commits made by `ct-release`. At any other
-time, setup.py's version is 0.0.0. If you need to refer to a specific
+time, `setup.py`\ 's version is ``0.0.0``. If you need to refer to a specific
 unreleased commit, use the commit's id instead.
 
 

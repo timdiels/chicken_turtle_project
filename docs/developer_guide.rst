@@ -32,15 +32,15 @@ based packages, we install them without pip and reuse the dev venv in
 pre-commits as to not incur the performance hit of waiting for a SIP package to
 compile.
 
-pytest-testmon is not compatible with pytest-xdist, --maxfail, --ff, --lf and
---cov to name a few. It sometimes misses changes that do cause test failures.
+`pytest-testmon` is not compatible with `pytest-xdist`, `--maxfail`, `--ff`, `--lf` and
+`--cov` to name a few. It sometimes misses changes that do cause test failures.
 For these reasons, we default to using xdist instead of testmon. We may revisit
-testmon once it supports xdist. You can still install and use --testmon
-yourself, you probably shouldn't add --testmon to setup.cfg though as that would
+testmon once it supports xdist. You can still install and use `--testmon`
+yourself, you probably shouldn't add `--testmon` to `setup.cfg` though as that would
 allow for commits with failing tests.
 
 It is guaranteed that any release commit can be checked out and by installing
-requirements.txt, all tests will succeed. We cannot guarantee this for commits
+`requirements.txt`, all tests will succeed. We cannot guarantee this for commits
 with editable requirements. We could require one to first ensure the editable
 requirement's repo is clean, and the commit has been pushed. We could then pin
 onto that particular commit. But this is too restrictive; you would no longer
@@ -50,7 +50,7 @@ it as soon as you use it in another repo you are working on.
 No effort is made to handle packages which fail to mention all of their
 dependencies, instead those packages should be fixed upstream. Should such a
 situation occur and the package maintainer refuses to fix it, a work around
-could be made: a list of packages, ct-mkvenv would install these in list-order
-with the version specs specified in requirements.txt, then ct-mkvenv would do
-another pip install -r requirements.txt for the other packages (without needing
-to exclude the misbehaving packages from requirements.txt).
+could be made: a list of packages, `ct-mkvenv` would install these in list-order
+with the version specs specified in `requirements.txt`, then `ct-mkvenv` would do
+another ``pip install -r requirements.txt`` for the other packages (without needing
+to exclude the misbehaving packages from `requirements.txt`).
