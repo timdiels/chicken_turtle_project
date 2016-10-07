@@ -36,6 +36,7 @@ setup(
                        'Programming Language :: Python :: Implementation :: Stackless',
                        'Topic :: Software Development'],
     'description': 'Python 3 project development tools',
+    'download_url': 'https://github.com/timdiels/chicken_turtle_project/releases/v2.3.0.tar.gz',
     'entry_points': {   'console_scripts': [   'ct-mkdoc = chicken_turtle_project.mkdoc:main',
                                                'ct-mkproject = chicken_turtle_project.mkproject:main',
                                                'ct-mkvenv = chicken_turtle_project.mkvenv:main',
@@ -159,5 +160,5 @@ setup(
                                                       'data/index.rst']},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '0.0.0'}
+    'version': '2.3.0'}
 )
