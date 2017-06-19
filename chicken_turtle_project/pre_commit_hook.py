@@ -20,7 +20,7 @@ from chicken_turtle_project import __version__
 from pathlib import Path
 import plumbum as pb
 import click
-from tempfile import mkdtemp
+from tempfile import TemporaryDirectory
 from glob import glob
 from contextlib import suppress
 
@@ -38,8 +38,9 @@ def main(debug):
     Internal, do not use
     '''
     with graceful_main(logger, app_name='pre-commit-hook', debug=debug):
-        temp_dir = Path(mkdtemp())
-        try:
+        with TemporaryDirectory() as temp_dir:
+            temp_dir = Path(temp_dir)
+            
             # Export last commit + staged changes
             if pb.local.env.get('CT_RELEASE'): # Are we releasing? (ct-release)
                 # Make clean copy of working dir without staged changes
@@ -76,8 +77,6 @@ def main(debug):
                 with pb.local.cwd(str(project_root)):
                     with suppress(pb.commands.ProcessExecutionError): # if restoring fails, commit should still continue
                         pb.local['ct-mkvenv']()
-        finally:
-            remove_file(temp_dir)
             
 def _get_abs_path_from_env(name):
     return Path(pb.local.env.get(name, '.')).absolute()
