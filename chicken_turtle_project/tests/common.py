@@ -375,3 +375,5 @@ def assert_process_fails(stderr_matches):
 def assert_re_search(pattern, string):
     assert re.search(pattern, string), 'Expected regex: {}\nto match: {}'.format(pattern, string)
     
+def get_abs_path_from_env(name):
+    return Path(pb.local.env.get(name, '.')).absolute()
