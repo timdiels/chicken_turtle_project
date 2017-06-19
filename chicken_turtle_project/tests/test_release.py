@@ -116,7 +116,6 @@ def test_happy_days(tmpcwd, mocked_release):
     assert mocked_release.call_args_list == [(('pypitest',),), (('pypi',),)]
     assert git_('tag').strip() == 'v1.0.0'
     setup_args = get_setup_args()
-    assert '1.0.0' in setup_args['download_url']
     assert setup_args['version'] == '1.0.0'
 
 def test_no_test_index(tmpcwd, mocked_release):

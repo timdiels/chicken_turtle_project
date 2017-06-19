@@ -47,11 +47,11 @@ project_defaults = dict(
     author_email='your_email@example.com',
     readme_file='README.md',
     url='https://example.com/project/home',
-    download_url='https://example.com/repo/{version}',
     license='LGPL3',
     keywords='keyword1 key-word2',
     index_test = 'pypitest',
     index_production = 'pypi',
+    download_url='https://example.com/project/downloads',
     classifiers='''
         Development Status :: 2 - Pre-Alpha
         Intended Audience :: Developers
@@ -114,7 +114,6 @@ _project_py.update(
     author='Mittens Glorious',
     author_email='mittens@test.com',
     url='https://test.com/project/home',
-    download_url='https://test.com/repo/{version}',
     classifiers='  Development Status :: 2 - Pre-Alpha\nProgramming Language :: Python :: Implementation :: Stackless\n\n'
 )
 

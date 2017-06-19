@@ -347,12 +347,6 @@ def _update_setup_py(project, project_root, pkg_root, format_kwargs):
     project['packages'] = find_packages()
     project['package_data'] = _get_package_data(project_root, project['packages'])
     
-    # Add download_url if current commit is version tagged
-    if project['version'] != _dummy_version:
-        project['download_url'] = project['download_url'].format(**format_kwargs)
-    else:
-        del project['download_url']
-    
     # Write setup.py
     del project['readme_file']
     if 'index_test' in project:
