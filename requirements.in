@@ -1,5 +1,5 @@
 # List of required dependencies
-#-e ../chicken_turtle_util
+#-e /home/limyreth/doc/eclipse_workspace/chicken_turtle_util
 chicken_turtle_util==1.0.0
 collections-extended
 more_itertools

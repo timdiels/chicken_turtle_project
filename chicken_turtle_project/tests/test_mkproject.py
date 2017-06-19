@@ -411,13 +411,14 @@ class TestSetupPyAndRequirementsTxt(object):
         assert set(setup_args['extras_require']['my_extra']) == {'checksumdir', 'pytest-pep8'}
         assert set(setup_args['extras_require']['test']) == set(spec.test_requirements_in)
         assert setup_args['version'] == '0.0.0'
-        assert 'download_url' not in setup_args
         
         # requirements.txt must contain relevant packages, including optional dependencies
         requirements_txt_content = read_file('requirements.txt')
         for name in {'pytest', 'pytest-testmon', 'pytest-env', 'pkg_magic', 'pytest-cov', 'checksumdir', 'pytest-pep8'} | set(spec.test_requirements_in) | set(spec.dev_requirements_in):
             assert name in requirements_txt_content
              
+        #TODO may be able to simplify tests a bit as we no longer care about *.in order. In the future we may get rid of *requirements.in files altogether though
+        
         # Requirements.txt must be sorted like pip-compile
         #TODO hard to test, exact order used is: https://github.com/nvie/pip-tools/blob/master/piptools/writer.py#L27
         # maybe 2 local setup.py and 2 trivial pypi packages that have no dependencies and won't have any in the near/distant future 

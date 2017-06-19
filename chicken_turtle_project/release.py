@@ -34,7 +34,7 @@ git_ = pb.local['git']
 Version = partial(versio.version.Version, scheme=versio.version_scheme.Pep440VersionScheme)
 Version.__name__ = 'Version'
     
-@click.command(context_settings=dict(help_option_names=['-h', '--help'])) #TODO put in CT util cli
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @cli.argument(
     'project-version',
     type=Version
