@@ -53,7 +53,7 @@ def main(debug):
             project = get_project(project_root)
             for pattern in project['pre_commit_no_ignore']:
                 for file in glob(pattern):
-                    pb.path.utils.copy(file, str(temp_dir / file))
+                    pb.local['cp']('-a', file, str(temp_dir / file))
             venv_dir = Path(pb.local.env.get('CT_VENV_DIR', str(project_root / 'venv'))).absolute()
             env_context = pb.local.env(
                 GIT_DIR=str(_get_abs_path_from_env('GIT_DIR')),
