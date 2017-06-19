@@ -160,5 +160,5 @@ setup(
                                                       'data/index.rst']},
     'packages': ['chicken_turtle_project', 'chicken_turtle_project.tests'],
     'url': 'https://github.com/timdiels/chicken_turtle_project',
-    'version': '2.3.0'}
+    'version': '0.0.0'}
 )
