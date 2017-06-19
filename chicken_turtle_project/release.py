@@ -66,6 +66,13 @@ def main(project_version, debug):
             
             # Export clean working tree
             (git_['archive', 'HEAD'] | pb.local['tar']['-x', '-C', temp_dir])()
+            
+            # Also copy pre_commit_no_ignore files
+            project_root = _get_abs_path_from_env('GIT_WORKING_TREE')
+            project = get_project(project_root)
+            for pattern in project['pre_commit_no_ignore']:
+                for file in glob(pattern):
+                    pb.local['cp']('-a', file, str(temp_dir / file))
         
             # Enter tree and get to work
             with pb.local.cwd(temp_dir):
