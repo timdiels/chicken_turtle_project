@@ -4,8 +4,10 @@ Chicken Turtle Project (CTP) provides CLI tools for developing Python 3 projects
 It makes it easier to make quality commits and releases, through automating
 what can be automated and by verifying manual work against quality requirements. 
 
-Chicken Turtle Project is alpha. The interface may change in the future, but
-has gained some stability.
+Chicken Turtle Project has been abandoned due to a lack of flexibility, every
+project is different, at least slighty. Instead, I recommend using a
+combination of tools, checklists and simple scripts. Chicken Turtle Project
+will no longer be developed or maintained.
 
 
 Links
