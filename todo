@@ -1,0 +1,25 @@
+Todos
+
+- packages list seems not to account for what is and isn't staged
+- -e deps (with [extra,extra2]) do not show up in setup.py
+- no unnecessary commit of __init__
+- Enhance: Support any pip version, require pip-tools>=1.7
+- Fix: plumbum.path.utils.copy: permission denied error
+
+  Replaced with unix cp. May be a plumbum bug, was copying a directory
+  whose permissions and containing files' permissions were rwx for all.
+
+- Change: do not pypandoc convert README.rst
+- Change: No longer require or format download_url
+- Doc: comments
+- todo first a bit more coding
+
+  Fix: copy pre_commit_no_ignore files in release test
+
+  Otherwise tests on release may file.
+- disable pre-commit hook (don't commit this)
+
+pip uninstall chicken-turtle-project
+pip install .
+
+
